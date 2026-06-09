@@ -125,7 +125,7 @@ const BROWNS_DATA = {
   },
   2003: {
     QB: [
-      { name: "Kelly Holcomb", stats: "1,797 yds, 10 TD, 12 INT, 72.3 rating in 9 starts. Competed with Garcia for the starting job all season." },
+      { name: "Kelly Holcomb", stats: "1,797 yds, 10 TD, 12 INT, 72.3 rating in 9 starts. Competed with Couch for the starting job all season." },
       { name: "Tim Couch", stats: "1,269 yds, 9 TD, 11 INT, 70.1 passer rating. Limited starts, last season with team." },
     ],
     RB: [
