@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { supabase } from "./supabaseClient.js";
 
 // ─── COMPLETE BROWNS DATA 1999-2025 ───────────────────────────────────────────
 // Each year has all pickable options across every position slot
@@ -1333,8 +1334,40 @@ export default function DawgPoundDraft() {
   const [rollDisplay, setRollDisplay] = useState(null);
   const [isRolling, setIsRolling] = useState(false);
   const [usedYears, setUsedYears] = useState([]);
-
   const [result, setResult] = useState(null);
+
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [playerName, setPlayerName] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [rosterPopup, setRosterPopup] = useState(null);
+
+  const handleSubmit = async () => {
+    if (!playerName.trim() || !result) return;
+    setSubmitting(true);
+    const rosterSnapshot = {};
+    SLOTS.forEach(slot => {
+      if (roster[slot.id]) rosterSnapshot[slot.id] = { name: roster[slot.id].name, year: roster[slot.id].year };
+    });
+    const { error } = await supabase.from("leaderboard").insert({
+      name: playerName.trim(), record: result.record, wins: result.wins,
+      score: result.teamScore, roster: rosterSnapshot,
+    });
+    setSubmitting(false);
+    if (error) { alert("Couldn't save: " + error.message); return; }
+    setSubmitted(true); setShowNamePrompt(false);
+    handleViewLeaderboard();
+  };
+
+  const handleViewLeaderboard = async () => {
+    setShowLeaderboard(true); setLeaderboardLoading(true);
+    const { data } = await supabase.from("leaderboard").select("*")
+      .order("score", { ascending: false }).order("wins", { ascending: false }).limit(50);
+    setLeaderboardData(data || []); setLeaderboardLoading(false);
+  };
 
   const filledSlots = SLOTS.filter(s => roster[s.id]);
   const unfilledSlots = getUnfilledSlots(roster);
@@ -1660,6 +1693,124 @@ export default function DawgPoundDraft() {
               </div>
             </div>
 
+            {/* Leaderboard buttons */}
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", margin: "10px 0 18px" }}>
+              {!submitted ? (
+                !showNamePrompt ? (
+                  <button onClick={() => setShowNamePrompt(true)} style={{
+                    background: "transparent", border: "1px solid #3a2a18", color: "#a07040",
+                    fontSize: 11, padding: "5px 12px", borderRadius: 4, cursor: "pointer",
+                    fontFamily: "inherit", letterSpacing: "0.08em", textTransform: "uppercase",
+                  }}>+ Add to Leaderboard</button>
+                ) : (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <input value={playerName} onChange={e => setPlayerName(e.target.value.slice(0,24))}
+                      placeholder="Your name" onKeyDown={async e => { if (e.key==="Enter") await handleSubmit(); }}
+                      style={{ background: "#1a120a", border: "1px solid #3a2a18", color: "#e0c090",
+                        fontSize: 12, padding: "5px 10px", borderRadius: 4, outline: "none",
+                        fontFamily: "inherit", width: 130 }} />
+                    <button onClick={handleSubmit} disabled={submitting || !playerName.trim()} style={{
+                      background: submitting ? "#1a120a" : "#ff5500", border: "none", color: "#fff",
+                      fontSize: 11, padding: "5px 12px", borderRadius: 4, cursor: "pointer",
+                      fontFamily: "inherit", letterSpacing: "0.08em", textTransform: "uppercase",
+                      opacity: (!playerName.trim() || submitting) ? 0.5 : 1,
+                    }}>{submitting ? "..." : "Submit"}</button>
+                    <button onClick={() => setShowNamePrompt(false)} style={{
+                      background: "transparent", border: "none", color: "#4a3828", fontSize: 14,
+                      cursor: "pointer", padding: "4px 6px" }}>✕</button>
+                  </div>
+                )
+              ) : (
+                <span style={{ fontSize: 11, color: "#6a8a4a", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  ✓ Added to Leaderboard
+                </span>
+              )}
+              <button onClick={handleViewLeaderboard} style={{
+                background: "transparent", border: "1px solid #3a2a18", color: "#a07040",
+                fontSize: 11, padding: "5px 12px", borderRadius: 4, cursor: "pointer",
+                fontFamily: "inherit", letterSpacing: "0.08em", textTransform: "uppercase",
+              }}>↗ View Leaderboard</button>
+            </div>
+
+            {/* Leaderboard Modal */}
+            {showLeaderboard && (
+              <div onClick={() => { setShowLeaderboard(false); setRosterPopup(null); }} style={{
+                position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 100,
+                display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+              }}>
+                <div onClick={e => e.stopPropagation()} style={{
+                  background: "#130e08", border: "1px solid #2a1e10", borderRadius: 10,
+                  width: "100%", maxWidth: 500, maxHeight: "80vh", display: "flex",
+                  flexDirection: "column", overflow: "hidden",
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "14px 16px", borderBottom: "1px solid #1e1508" }}>
+                    <span style={{ fontSize: 12, letterSpacing: "0.15em", color: "#ff9900",
+                      fontFamily: "inherit", textTransform: "uppercase" }}>🏆 Leaderboard</span>
+                    <button onClick={() => { setShowLeaderboard(false); setRosterPopup(null); }} style={{
+                      background: "none", border: "none", color: "#5a4030", fontSize: 18,
+                      cursor: "pointer", lineHeight: 1 }}>✕</button>
+                  </div>
+                  <div style={{ overflowY: "auto", flex: 1 }}>
+                    {leaderboardLoading ? (
+                      <p style={{ color: "#5a4030", textAlign: "center", padding: 24, fontSize: 13 }}>Loading...</p>
+                    ) : leaderboardData.length === 0 ? (
+                      <p style={{ color: "#5a4030", textAlign: "center", padding: 24, fontSize: 13 }}>No entries yet. Be the first!</p>
+                    ) : (
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ borderBottom: "1px solid #1e1508" }}>
+                            {["#","Name","Record","Score","Roster"].map(h => (
+                              <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#5a4030",
+                                fontWeight: 500, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaderboardData.map((entry, i) => (
+                            <tr key={entry.id} style={{ borderBottom: "1px solid #1a1208",
+                              background: i%2===0 ? "transparent" : "#0d0a06" }}>
+                              <td style={{ padding: "9px 12px", color: "#3a2a18", fontSize: 11 }}>{i+1}</td>
+                              <td style={{ padding: "9px 12px", color: "#e0c090", fontWeight: 500 }}>{entry.name}</td>
+                              <td style={{ padding: "9px 12px", color: "#c09060" }}>{entry.record}</td>
+                              <td style={{ padding: "9px 12px", color: "#ff9900", fontWeight: 600 }}>{entry.score}</td>
+                              <td style={{ padding: "9px 12px" }}>
+                                <button onClick={() => setRosterPopup(rosterPopup?.id===entry.id ? null : {...entry.roster, id: entry.id})}
+                                  style={{ background: "#1e1508", border: "1px solid #2a1e10", color: "#a07040",
+                                    fontSize: 10, padding: "3px 8px", borderRadius: 3, cursor: "pointer",
+                                    letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                                  {rosterPopup?.id===entry.id ? "Hide" : "View"}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                    {rosterPopup && (
+                      <div style={{ margin: "0 12px 12px", background: "#0d0a06",
+                        border: "1px solid #2a1e10", borderRadius: 6, padding: "12px 14px" }}>
+                        <p style={{ fontSize: 10, color: "#5a4030", textTransform: "uppercase",
+                          letterSpacing: "0.1em", marginBottom: 8 }}>Roster</p>
+                        {SLOTS.map(slot => {
+                          const p = rosterPopup[slot.id]; if (!p) return null;
+                          return (
+                            <div key={slot.id} style={{ display: "flex", gap: 8, alignItems: "baseline",
+                              padding: "3px 0", borderBottom: "1px solid #1a1208" }}>
+                              <span style={{ fontSize: 10, color: "#3a2a18", width: 30,
+                                textTransform: "uppercase", flexShrink: 0 }}>{slot.label}</span>
+                              <span style={{ fontSize: 12, color: "#c09060" }}>{p.name}</span>
+                              <span style={{ fontSize: 11, color: "#3a2a18", marginLeft: "auto" }}>{p.year}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Regular season analysis */}
             <div style={{ background: "#110a04", border: "1px solid #1e1006", borderRadius: 5, padding: "18px", marginBottom: 8 }}>
               <div style={{ fontSize: 10, letterSpacing: 4, color: "#ff5500", textTransform: "uppercase", marginBottom: 9 }}>Season Analysis</div>
@@ -1728,6 +1879,7 @@ export default function DawgPoundDraft() {
               <button onClick={() => {
                 setRoster({}); setRolledYear(null); setRollDisplay(null);
                 setUsedYears([]); setResult(null); setPhase("intro");
+                setSubmitted(false); setShowNamePrompt(false); setPlayerName("");
               }} style={btn("#2a1506", false, "#ff5500")}>
                 DRAFT AGAIN
               </button>
