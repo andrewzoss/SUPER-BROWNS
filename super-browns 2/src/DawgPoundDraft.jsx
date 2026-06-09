@@ -864,7 +864,7 @@ function scorePlayer(slotId, player) {
     const ratingM = stats.match(/(\d+\.\d+)\s*(?:passer\s*)?rating/);
     if (ratingM) {
       const r = parseFloat(ratingM[1]);
-      if (r >= 100) s += 3; else if (r >= 95) s += 2; else if (r >= 88) s += 1; else if (r >= 80) { /* neutral */ }
+      if (r >= 100) s += 3; else if (r >= 95) s += 2; else if (r >= 88) s += 1; else if (r >= 80) s += 0.5;
       else if (r >= 70) s -= 1; else if (r >= 65) s -= 2; else s -= 3.5;
       const tdR = stats.match(/(\d+)\s*td/), intR = stats.match(/(\d+)\s*int/);
       if (tdR && intR) {
@@ -880,7 +880,7 @@ function scorePlayer(slotId, player) {
         if (ratio >= 3) s += 0.5 * vf; else if (ratio < 1) s -= 1.5 * Math.min(1, vf + 0.3);
       }
     }
-    if (stats.includes("27 td") || stats.includes("29 td") || stats.includes("26 td")) s += 0.5;
+    if (stats.includes("29 td")) s += 1.25; else if (stats.includes("27 td") || stats.includes("26 td")) s += 0.5;
     const ypaM = stats.match(/([\d.]+)\s*ypa/);
     if (ypaM) { const ypa = parseFloat(ypaM[1]); if (ypa < 5.5) s -= 2; else if (ypa < 6.5) s -= 0.5; }
     const cpM = stats.match(/(\d+)%\s*completion/);
@@ -1335,7 +1335,6 @@ export default function DawgPoundDraft() {
   const [isRolling, setIsRolling] = useState(false);
   const [usedYears, setUsedYears] = useState([]);
   const [result, setResult] = useState(null);
-
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [playerName, setPlayerName] = useState("");
@@ -1732,7 +1731,6 @@ export default function DawgPoundDraft() {
               }}>↗ View Leaderboard</button>
             </div>
 
-            {/* Leaderboard Modal */}
             {showLeaderboard && (
               <div onClick={() => { setShowLeaderboard(false); setRosterPopup(null); }} style={{
                 position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 100,
