@@ -1358,7 +1358,7 @@ export default function DawgPoundDraft() {
         rosterSnapshot[slot.id] = { name: roster[slot.id].name, year: roster[slot.id].year };
       }
     });
-    await supabase.from("leaderboard").insert({
+    const { error } = await supabase.from("leaderboard").insert({
       name: playerName.trim(),
       record: result.record,
       wins: result.wins,
@@ -1366,8 +1366,14 @@ export default function DawgPoundDraft() {
       roster: rosterSnapshot,
     });
     setSubmitting(false);
+    if (error) {
+      alert("Couldn't save to leaderboard: " + error.message);
+      return;
+    }
     setSubmitted(true);
     setShowNamePrompt(false);
+    // Auto-open leaderboard after submit
+    handleViewLeaderboard();
   };
 
   const handleViewLeaderboard = async () => {
