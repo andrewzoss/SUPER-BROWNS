@@ -832,6 +832,33 @@ const SLOTS = [
   { id: "HC",  label: "HC",  icon: "📋", desc: "Head Coach" },
 ];
 
+const EASY_SLOTS = [
+  { id: "QB",  label: "QB",  icon: "🏈", desc: "Quarterback" },
+  { id: "RB",  label: "RB",  icon: "💨", desc: "Running Back" },
+  { id: "RB2", label: "RB",  icon: "💨", desc: "Running Back 2" },
+  { id: "WR1", label: "WR",  icon: "⚡", desc: "Wide Receiver 1" },
+  { id: "WR2", label: "WR",  icon: "⚡", desc: "Wide Receiver 2" },
+  { id: "TE",  label: "TE",  icon: "🔒", desc: "Tight End" },
+  { id: "OL",  label: "OL",  icon: "🛡️", desc: "Offensive Line" },
+  { id: "DEF", label: "DEF", icon: "🦅", desc: "Defense" },
+  { id: "HC",  label: "HC",  icon: "📋", desc: "Head Coach" },
+  { id: "K",   label: "K",   icon: "🥾", desc: "Kicker" },
+];
+
+const EASY_WEIGHTS = { QB:19, RB:10, RB2:7, WR1:7, WR2:6, TE:5, OL:13, DEF:14, HC:13, K:6 };
+
+const LAKE_EFFECT_EVENTS = [
+  { name: "Unsportsmanlike Conduct: Helmet Toss", desc: "Dwayne Rudd throws his helmet off celebrating before the play ends.", winMod: -1 },
+  { name: "Fuck Them Picks", desc: "Win a meaningless game late in the season.", winMod: +1 },
+  { name: "Win It For Jim", desc: "Win a game to honor Jim Donavon.", winMod: +1 },
+  { name: "Interim Coach", desc: "Your HC gets fired and/or COVID and sits this one out. The team is inspired by a new voice.", winMod: +1 },
+  { name: "Sex Offender", desc: "Your owner, a criminal, demands you put a sex offender on your roster.", winMod: -2 },
+  { name: "Bottlegate", desc: "The Dawg Pound pelts your sorry ass team with beer bottles and maybe even a radio?", winMod: -1 },
+  { name: "Captured by Flag", desc: "Your Starting QB gets trapped under the American flag in the pregame.", winMod: -1 },
+  { name: "Play The Jets", desc: "Hey, we got one!", winMod: +1 },
+  { name: "DePodesta'd", desc: "Paul's algorithm wants to see Cody Kessler in on this drive.", winMod: -1 },
+];
+
 function getBaseId(slotId) {
   return slotId.replace(/\d+$/, "");
 }
@@ -980,7 +1007,18 @@ function scorePlayer(slotId, player) {
     if (wpM) { const v = parseFloat(wpM[1]); if (v >= 0.55) s += 2; else if (v >= 0.45) s += 0.5; else if (v >= 0.35) s -= 0.5; else if (v >= 0.25) s -= 1.5; else s -= 2.5; }
   }
 
-  return Math.max(1, Math.min(10, s));
+  if (baseId === "K") {
+    const fgM = stats.match(/(\d+)\/(\d+)\s*FG/);
+    if (fgM) {
+      const pct = parseInt(fgM[1]) / parseInt(fgM[2]);
+      if (pct >= 0.90) s += 3; else if (pct >= 0.85) s += 2;
+      else if (pct >= 0.80) s += 1; else if (pct >= 0.75) s += 0;
+      else if (pct >= 0.70) s -= 1; else s -= 2;
+    }
+    return Math.max(1, Math.min(8, s));
+  }
+
+  return Math.max(1, Math.min(8, s));
 }
 
 function gradeLabel(score) {
@@ -991,8 +1029,9 @@ function gradeLabel(score) {
   return "Terrible";
 }
 
-function runSimulation(roster) {
-  const weights = { QB: 21, RB: 12, WR1: 7, WR2: 7, TE: 5, OL: 15, DEF: 18, HC: 15 };
+function runSimulation(roster, mode = "classic", lakeEffectMod = 0) {
+  const weights = mode === "easy" ? EASY_WEIGHTS
+    : { QB: 21, RB: 12, WR1: 7, WR2: 7, TE: 5, OL: 15, DEF: 18, HC: 15 };
   const scores = {};
   for (const slot of SLOTS) scores[slot.id] = scorePlayer(slot.id, roster[slot.id]);
 
@@ -1007,7 +1046,8 @@ function runSimulation(roster) {
   // Map avg score (1-10) to wins (1-16)
   // Calibrated so avg=5 → ~7 wins, avg=7 → ~11 wins, avg=8.5 → ~14 wins
   const rawWins = (avg - 1) * 2 - 1;
-  const wins = Math.max(0, Math.min(17, Math.round(rawWins)));
+  const baseWins = Math.max(0, Math.min(17, Math.round(rawWins)));
+  const wins = Math.max(0, Math.min(17, baseWins + lakeEffectMod));
   const losses = 17 - wins;
 
   // Unit scores
@@ -1260,14 +1300,46 @@ function runSimulation(roster) {
     return parts.join(" ");
   };
 
-  const moments = {
-    super: `A nationally televised Sunday night game where ${roster.QB?.name} orchestrates a 98-yard game-winning drive in the final two minutes. ${roster.WR1?.name} catches the walk-off TD. The Dawg Pound erupts so loud the broadcast can't even call the play. Dog masks. Chaos. Tears. Cleveland actually deserves this one.`,
-    great: `Trailing by 4 in the fourth quarter of a playoff game, ${roster.QB?.name} finds ${roster.WR1?.name} on a crossing route for 32 yards as the Browns kick the walk-off field goal as time expires. The Dawg Pound hadn't been this loud since 2002. Camera cuts to ${roster.HC?.name} storming the field, headset dangling, arms in the air.`,
-    good: `A crisp November Sunday where ${roster.RB?.name} breaks a 67-yard TD run, ${roster.QB?.name} adds two more scores, and the defense suffocates Pittsburgh's offense in a 27-10 statement win. Totally unremarkable to anyone outside Cleveland. Life-defining to everyone inside it.`,
-    avg: `Up 17-3 in the 4th quarter with a playoff spot on the line, the offense goes three-and-out four straight times. The defense wilts. They lose in overtime, 20-17. ${roster.HC?.name} uses all three timeouts in the final two minutes for no discernible reason. The subreddit crashes.`,
-    bad: `After a surprising 3-game win streak raises hopes, a home prime-time game ends in a 41-10 beatdown with ${roster.QB?.name} pulled at halftime. A fan in a dog mask outside the stadium holds a handmade sign: "At Least Phil Dawson Is Still Alive." It gets 200k impressions.`,
-    awful: `Week 8, down 45-3, the PA system starts playing "Closing Time." The last 6,000 fans still in the building start singing along unironically. The cameras find ${roster.QB?.name} on the sideline staring into the middle distance. Nobody in the booth can think of anything to say. A dog barks in the distance.`,
+  const momentPools = {
+    super: [
+      `A nationally televised Sunday night game where ${roster.QB?.name} orchestrates a 98-yard game-winning drive in the final two minutes. ${roster.WR1?.name} catches the walk-off TD. The Dawg Pound erupts so loud the broadcast can't even call the play. Dog masks. Chaos. Tears. Cleveland actually deserves this one.`,
+      `${roster.RB?.name} runs for 147 yards and two touchdowns in the Super Bowl. ${roster.QB?.name} doesn't throw an interception for eleven consecutive playoff games. The city of Cleveland shuts down for a parade that makes 1948 look like a neighborhood block party.`,
+      `Down 10 with six minutes left in the AFC Championship, the defense forces three straight stops. ${roster.QB?.name} converts a 4th-and-8 to ${roster.WR1?.name} to keep the drive alive. They score. Two weeks later, the Lombardi sits in Berea. Dogs everywhere.`,
+      `${roster.HC?.name} calls a fake punt on 4th-and-1 from his own 26 in the NFC Championship. It works. Announcers lose their minds. Cleveland fans were not surprised — they believed. They always believed. This year, belief was enough.`,
+    ],
+    great: [
+      `Trailing by 4 in the fourth quarter of a playoff game, ${roster.QB?.name} finds ${roster.WR1?.name} on a crossing route for 32 yards as the Browns kick the walk-off field goal as time expires. The Dawg Pound hadn't been this loud since 2002. Camera cuts to ${roster.HC?.name} storming the field, headset dangling, arms in the air.`,
+      `${roster.RB?.name} rushes for 178 yards in a divisional win over Pittsburgh. The season ends one game short in the AFC Championship. A fan near the tunnel throws a dog bone onto the field as the final seconds tick away. It's not despair. It's pride. There's a difference now.`,
+      `The defense holds the opposing offense to 9 points through three quarters. Then the offense stalls. Then the special teams fumbles. They lose 13-10 in overtime on a walk-off field goal. ${roster.QB?.name} stares at the turf for thirty seconds before walking off. He'll be back.`,
+      `${roster.WR1?.name} catches eleven balls for 178 yards in a divisional round game that Cleveland leads 21-7 entering the fourth. They don't hold on. They never hold on. But God, that first half was something to witness. Nobody who was there will ever forget it.`,
+    ],
+    good: [
+      `A crisp November Sunday where ${roster.RB?.name} breaks a 67-yard TD run, ${roster.QB?.name} adds two more scores, and the defense suffocates Pittsburgh's offense in a 27-10 statement win. Totally unremarkable to anyone outside Cleveland. Life-defining to everyone inside it.`,
+      `Week 15, a monsoon in Cleveland, the kind of game nobody outside Ohio watches. ${roster.RB?.name} carries 24 times for 131 yards. The defense forces four turnovers. Final score: 20-6. The stadium is three-quarters empty by halftime from the weather. The 18,000 who stayed will describe this game for the rest of their lives.`,
+      `${roster.QB?.name} throws for 312 yards and three touchdowns against Baltimore on a Thursday night. The national media calls it an upset. Cleveland fans call it expected. The comment sections are wild. The Browns make the playoffs for the second time in three years. Normal.`,
+      `Wild card weekend. ${roster.WR1?.name} turns a short crossing route into a 71-yard touchdown that silences a road crowd. ${roster.HC?.name} pumps his fist once — just once — on the sideline. The Browns win 24-17 and lose the following week, but that play exists forever.`,
+    ],
+    avg: [
+      `Up 17-3 in the 4th quarter with a playoff spot on the line, the offense goes three-and-out four straight times. The defense wilts. They lose in overtime, 20-17. ${roster.HC?.name} uses all three timeouts in the final two minutes for no discernible reason. The subreddit crashes.`,
+      `A 6-6 team in mid-December with a path to the playoffs if they win out. They go 1-3. ${roster.QB?.name} throws two fourth-quarter interceptions in the finale that would've clinched it. He finishes the season with a 78.4 passer rating. No comment from the front office. See you in April.`,
+      `They beat the Bengals, Steelers, and Ravens in a span of four weeks — a division sweep that means nothing because they lost the other twelve. The highlight reel is incredible. The record is not. Classic Browns.`,
+      `${roster.RB?.name} rushes for 1,100 yards and never gets the ball in the fourth quarter of close games. ${roster.WR1?.name} has four 100-yard games and four drops in the red zone. The offense scores 24 or more eight times. The defense gives up 27 or more eleven times. They finish 8-9. Somehow.`,
+    ],
+    bad: [
+      `After a surprising 3-game win streak raises hopes, a home prime-time game ends in a 41-10 beatdown with ${roster.QB?.name} pulled at halftime. A fan in a dog mask outside the stadium holds a handmade sign: "At Least Phil Dawson Is Still Alive." It gets 200k impressions.`,
+      `${roster.QB?.name} gets benched in Week 10 with the team sitting at 3-7. The backup throws for 280 yards and two TDs in relief. The front office does not address this publicly. The beat reporters' faces during the Monday presser say everything. Season over.`,
+      `A home game against the Jets draws 41,000 fans in a stadium that holds 67,000. The announced attendance is 63,400. The Browns lose 31-13. Three fumbles. A pick-six. ${roster.HC?.name} says "we need to be better" eleven times in the postgame. Nobody disagrees. That's the whole problem.`,
+      `The offense scores in double digits only four times all season. ${roster.WR1?.name} finishes the year with 44 receptions. A team with this much potential on paper producing this little on the field is its own kind of Cleveland tradition. Draft picks. Fresh start. Next year.`,
+    ],
+    awful: [
+      `Week 8, down 45-3, the PA system starts playing "Closing Time." The last 6,000 fans still in the building start singing along unironically. The cameras find ${roster.QB?.name} on the sideline staring into the middle distance. Nobody in the booth can think of anything to say. A dog barks in the distance.`,
+      `The team loses its first nine games and fires ${roster.HC?.name} on a Tuesday morning via press release. The interim coach wins two games to close the season, which is somehow worse — it costs them a top draft pick. ESPN runs a segment called "The Browns Experience." It's fourteen minutes long.`,
+      `By Week 6, four different QBs have started games. ${roster.QB?.name} is one of them. He completes 48% of his passes and throws for 1,100 yards before an ankle injury ends his season. In the final game, the stadium fills to 80% capacity — mostly for the opposing team's fans. This happens every year.`,
+      `The defense gives up 30+ points nine times. The offensive line allows 54 sacks. ${roster.RB?.name} averages 3.2 yards per carry behind that line. A first-round pick is announced as a "cornerstone of the rebuild." Cleveland holds its breath. Cleveland always holds its breath.`,
+    ],
   };
+  const tierOptions = momentPools[tier];
+  const moments = { [tier]: tierOptions[Math.floor(Math.random() * tierOptions.length)] };
 
   const liabilityReason = (id, score) => {
     const baseId = id.replace(/\d+$/, '');
@@ -1329,12 +1401,20 @@ function runSimulation(roster) {
 
 export default function DawgPoundDraft() {
   const [phase, setPhase] = useState("intro");
+  const [mode, setMode] = useState("classic");
   const [roster, setRoster] = useState({});
   const [rolledYear, setRolledYear] = useState(null);
   const [rollDisplay, setRollDisplay] = useState(null);
   const [isRolling, setIsRolling] = useState(false);
   const [usedYears, setUsedYears] = useState([]);
+
   const [result, setResult] = useState(null);
+  const [rerollsLeft, setRerollsLeft] = useState(0);
+  const [lakeEffect, setLakeEffect] = useState(null);
+  const [lakeEffectDone, setLakeEffectDone] = useState(false);
+  const [injuredSlotId, setInjuredSlotId] = useState(null);
+  const [injuryDone, setInjuryDone] = useState(false);
+
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [playerName, setPlayerName] = useState("");
@@ -1342,18 +1422,21 @@ export default function DawgPoundDraft() {
   const [submitting, setSubmitting] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardFilter, setLeaderboardFilter] = useState("all");
   const [rosterPopup, setRosterPopup] = useState(null);
+
+  const activeSlots = mode === "easy" ? EASY_SLOTS : SLOTS;
 
   const handleSubmit = async () => {
     if (!playerName.trim() || !result) return;
     setSubmitting(true);
     const rosterSnapshot = {};
-    SLOTS.forEach(slot => {
+    activeSlots.forEach(slot => {
       if (roster[slot.id]) rosterSnapshot[slot.id] = { name: roster[slot.id].name, year: roster[slot.id].year };
     });
     const { error } = await supabase.from("leaderboard").insert({
       name: playerName.trim(), record: result.record, wins: result.wins,
-      score: result.teamScore, roster: rosterSnapshot,
+      score: result.teamScore, roster: rosterSnapshot, mode,
     });
     setSubmitting(false);
     if (error) { alert("Couldn't save: " + error.message); return; }
@@ -1364,11 +1447,11 @@ export default function DawgPoundDraft() {
   const handleViewLeaderboard = async () => {
     setShowLeaderboard(true); setLeaderboardLoading(true);
     const { data } = await supabase.from("leaderboard").select("*")
-      .order("score", { ascending: false }).order("wins", { ascending: false }).limit(50);
+      .order("score", { ascending: false }).order("wins", { ascending: false }).limit(100);
     setLeaderboardData(data || []); setLeaderboardLoading(false);
   };
 
-  const filledSlots = SLOTS.filter(s => roster[s.id]);
+  const filledSlots = activeSlots.filter(s => roster[s.id]);
   const unfilledSlots = getUnfilledSlots(roster);
   const allFilled = unfilledSlots.length === 0;
 
@@ -1400,6 +1483,27 @@ export default function DawgPoundDraft() {
     setUsedYears(prev => prev.includes(year) ? prev : [...prev, year]);
     setRolledYear(null);
     setRollDisplay(null);
+
+    const filled = Object.keys(newRoster).length;
+    const total = activeSlots.length;
+
+    // Chaos: Lake Effect fires at midpoint
+    if (mode === "chaos" && filled === Math.floor(total / 2) && !lakeEffectDone) {
+      const event = LAKE_EFFECT_EVENTS[Math.floor(Math.random() * LAKE_EFFECT_EVENTS.length)];
+      setLakeEffect(event);
+      setLakeEffectDone(true);
+      setPhase("lake_effect");
+      return;
+    }
+
+    // Chaos: Injury fires when all slots filled
+    if (mode === "chaos" && filled === total && !injuryDone) {
+      const slotIds = Object.keys(newRoster);
+      const injured = slotIds[Math.floor(Math.random() * slotIds.length)];
+      setInjuredSlotId(injured);
+      setPhase("injury");
+      return;
+    }
   }
 
   function swapRoster(slotA, slotB) {
@@ -1410,12 +1514,23 @@ export default function DawgPoundDraft() {
     }));
   }
 
+  function startMode(selectedMode) {
+    setMode(selectedMode);
+    setRerollsLeft(selectedMode === "easy" ? 1 : 0);
+    setLakeEffect(null);
+    setLakeEffectDone(false);
+    setInjuredSlotId(null);
+    setInjuryDone(false);
+    setRoster({});
+    setUsedYears([]);
+    setResult(null);
+    setPhase("draft");
+  }
+
   function simulateSeason() {
     setPhase("simulate");
-
-    // Algorithmic simulation — no API needed
     setTimeout(() => {
-      const result = runSimulation(roster);
+      const result = runSimulation(roster, mode, lakeEffect?.winMod || 0);
       setResult(result);
       setPhase("result");
     }, 1600);
@@ -1459,19 +1574,29 @@ export default function DawgPoundDraft() {
           )}
         </header>
 
-        {/* ── INTRO ── */}
+        {/* ── INTRO / MODE SELECT ── */}
         {phase === "intro" && (
-          <div style={{ textAlign: "center", marginTop: 32 }}>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginBottom: 36 }}>
-              {SLOTS.map(s => (
-                <div key={s.id} style={{ background: "#180f08", border: "1px solid #2a1a0d", borderRadius: 3,
-                  padding: "5px 11px", fontSize: 11, color: "#5a3820", letterSpacing: 2 }}>
-                  {s.icon} {s.label}
-                </div>
+          <div style={{ textAlign: "center", marginTop: 32, padding: "0 16px" }}>
+            <div style={{ fontSize: 11, letterSpacing: 3, color: "#c4a882", textTransform: "uppercase", marginBottom: 28 }}>Select Mode</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 340, margin: "0 auto" }}>
+              {[
+                { id: "classic", label: "Classic", icon: "🏈", desc: "8 slots · standard draft" },
+                { id: "easy",    label: "Easy",    icon: "⭐", desc: "10 slots · extra RB · Kicker · 1 Reroll" },
+                { id: "chaos",   label: "Chaos",   icon: "🌊", desc: "8 slots · Lake Effect event · Injury risk" },
+              ].map(m => (
+                <button key={m.id} onClick={() => startMode(m.id)} style={{
+                  background: "#130e08", border: "1px solid #3a2a18", borderRadius: 8,
+                  padding: "16px 20px", cursor: "pointer", textAlign: "left", display: "flex",
+                  alignItems: "center", gap: 14, transition: "border-color 0.2s",
+                }}>
+                  <span style={{ fontSize: 24 }}>{m.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#e0c090", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "Georgia, serif" }}>{m.label}</div>
+                    <div style={{ fontSize: 11, color: "#5a4030", marginTop: 3, letterSpacing: "0.04em" }}>{m.desc}</div>
+                  </div>
+                </button>
               ))}
             </div>
-            <button onClick={() => setPhase("draft")} style={btn("#ff5500")}>START DRAFTING</button>
           </div>
         )}
 
@@ -1485,16 +1610,16 @@ export default function DawgPoundDraft() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
                 padding: "6px 12px", borderBottom: "1px solid #1e1006" }}>
                 <div style={{ fontSize: 10, letterSpacing: 4, color: "#5a3820", textTransform: "uppercase" }}>Roster</div>
-                <div style={{ fontSize: 10, color: "#3a2010", letterSpacing: 2 }}>{filledSlots.length}/{SLOTS.length} filled</div>
+                <div style={{ fontSize: 10, color: "#3a2010", letterSpacing: 2 }}>{filledSlots.length}/{activeSlots.length} filled</div>
               </div>
-              {SLOTS.map((slot, i) => {
+              {activeSlots.map((slot, i) => {
                 const pick = roster[slot.id];
                 const filled = !!pick;
                 return (
                   <div key={slot.id} style={{
                     display: "flex", alignItems: "center", gap: 10,
                     padding: "6px 12px",
-                    borderBottom: i < SLOTS.length - 1 ? "1px solid #160d06" : "none",
+                    borderBottom: i < activeSlots.length - 1 ? "1px solid #160d06" : "none",
                     background: filled ? "#140c05" : "transparent",
                   }}>
                     <div style={{ width: 32, fontSize: 9, letterSpacing: 2, textTransform: "uppercase",
@@ -1517,9 +1642,18 @@ export default function DawgPoundDraft() {
                   </div>
                 );
               })}
+              {/* Lake Effect slot — appears after event fires in Chaos mode */}
+              {mode === "chaos" && lakeEffect && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderBottom: "1px solid #1a1208" }}>
+                  <span style={{ fontSize: 10, color: "#ff9900", width: 30, textTransform: "uppercase", letterSpacing: 1, flexShrink: 0 }}>🌊</span>
+                  <span style={{ fontSize: 12, color: lakeEffect.winMod > 0 ? "#6a9a40" : "#c04040", fontStyle: "italic" }}>
+                    {lakeEffect.name} ({lakeEffect.winMod > 0 ? "+" : ""}{lakeEffect.winMod}W)
+                  </span>
+                </div>
+              )}
               {/* Progress bar at bottom */}
               <div style={{ height: 2, background: "#1a0e06" }}>
-                <div style={{ height: "100%", width: `${(filledSlots.length / SLOTS.length) * 100}%`,
+                <div style={{ height: "100%", width: `${(filledSlots.length / activeSlots.length) * 100}%`,
                   background: "linear-gradient(90deg, #ff5500, #ff9900)", transition: "width 0.4s ease" }} />
               </div>
             </div>
@@ -1563,7 +1697,7 @@ export default function DawgPoundDraft() {
                     const players = yearData[baseId] || [];
                     if (players.length === 0) return null;
                     const openSlots = unfilledSlots.filter(s => getBaseId(s.id) === baseId);
-                    const slotMeta = SLOTS.find(s => getBaseId(s.id) === baseId);
+                    const slotMeta = activeSlots.find(s => getBaseId(s.id) === baseId);
                     return { baseId, players, openSlots, icon: slotMeta?.icon, label: slotMeta?.label };
                   }).filter(Boolean);
 
@@ -1624,6 +1758,67 @@ export default function DawgPoundDraft() {
                 </button>
               </div>
             )}
+
+            {/* Reroll button for Easy mode */}
+            {mode === "easy" && rerollsLeft > 0 && rolledYear && (
+              <div style={{ textAlign: "center", marginTop: 8 }}>
+                <button onClick={() => {
+                  setRolledYear(null); setRollDisplay(null);
+                  setRerollsLeft(r => r - 1);
+                  setTimeout(() => rollDice(), 100);
+                }} style={{ background: "transparent", border: "1px solid #3a6a20", color: "#6a9a40",
+                  fontSize: 11, padding: "6px 16px", borderRadius: 4, cursor: "pointer",
+                  fontFamily: "inherit", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  🎲 Reroll Year ({rerollsLeft} left)
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── LAKE EFFECT (CHAOS) ── */}
+        {phase === "lake_effect" && lakeEffect && (
+          <div style={{ padding: "24px 20px", maxWidth: 420, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🌊</div>
+              <div style={{ fontSize: 11, letterSpacing: 3, color: "#ff9900", textTransform: "uppercase", marginBottom: 12 }}>Lake Effect</div>
+              <div style={{ background: "#130e08", border: `1px solid ${lakeEffect.winMod > 0 ? "#4a7a30" : "#8a2020"}`, borderRadius: 10, padding: "20px 16px" }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#e0c090", fontFamily: "Georgia, serif", marginBottom: 10, lineHeight: 1.4 }}>
+                  "{lakeEffect.name}"
+                </div>
+                <div style={{ fontSize: 13, color: "#8a7060", lineHeight: 1.6, marginBottom: 14 }}>{lakeEffect.desc}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: lakeEffect.winMod > 0 ? "#6a9a40" : "#c04040" }}>
+                  {lakeEffect.winMod > 0 ? `+${lakeEffect.winMod}` : lakeEffect.winMod} Win{Math.abs(lakeEffect.winMod) !== 1 ? "s" : ""}
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setPhase("draft")} style={btn("#ff5500")}>Continue Draft</button>
+          </div>
+        )}
+
+        {/* ── INJURY (CHAOS) ── */}
+        {phase === "injury" && injuredSlotId && (
+          <div style={{ padding: "24px 20px", maxWidth: 420, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🚑</div>
+              <div style={{ fontSize: 11, letterSpacing: 3, color: "#ff5500", textTransform: "uppercase", marginBottom: 12 }}>Injury Report</div>
+              <div style={{ background: "#130e08", border: "1px solid #8a2020", borderRadius: 10, padding: "20px 16px", marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: "#8a7060", marginBottom: 6 }}>
+                  {activeSlots.find(s => s.id === injuredSlotId)?.label} — Down for the season
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#e0c090", fontFamily: "Georgia, serif" }}>
+                  {roster[injuredSlotId]?.name} ({roster[injuredSlotId]?.year})
+                </div>
+              </div>
+              <div style={{ fontSize: 13, color: "#5a4030", marginBottom: 16 }}>Roll once to find a replacement.</div>
+            </div>
+            <button onClick={() => {
+              const newRoster = { ...roster };
+              delete newRoster[injuredSlotId];
+              setRoster(newRoster);
+              setInjuryDone(true);
+              setPhase("draft");
+            }} style={btn("#ff5500")}>Roll for Replacement</button>
           </div>
         )}
 
@@ -1692,6 +1887,26 @@ export default function DawgPoundDraft() {
               </div>
             </div>
 
+            {/* Mode badge */}
+            <div style={{ textAlign: "center", marginBottom: 6 }}>
+              <span style={{ fontSize: 10, letterSpacing: 2, color: "#3a2a18", textTransform: "uppercase",
+                background: "#1a1208", border: "1px solid #2a1e10", borderRadius: 3, padding: "3px 8px" }}>
+                {mode === "easy" ? "⭐ Easy" : mode === "chaos" ? "🌊 Chaos" : "🏈 Classic"} Mode
+              </span>
+            </div>
+
+            {/* Lake Effect result for Chaos mode */}
+            {mode === "chaos" && lakeEffect && (
+              <div style={{ margin: "8px 0 4px", padding: "10px 14px", background: "#0d0a06",
+                border: `1px solid ${lakeEffect.winMod > 0 ? "#2a4a1a" : "#4a1a1a"}`, borderRadius: 6, textAlign: "center" }}>
+                <span style={{ fontSize: 10, letterSpacing: 2, color: "#ff9900", textTransform: "uppercase" }}>🌊 Lake Effect</span>
+                <div style={{ fontSize: 13, color: "#c09060", marginTop: 4, fontStyle: "italic" }}>"{lakeEffect.name}"</div>
+                <div style={{ fontSize: 12, color: lakeEffect.winMod > 0 ? "#6a9a40" : "#c04040", marginTop: 2 }}>
+                  {lakeEffect.winMod > 0 ? `+${lakeEffect.winMod}` : lakeEffect.winMod} win{Math.abs(lakeEffect.winMod) !== 1 ? "s" : ""} applied to final record
+                </div>
+              </div>
+            )}
+
             {/* Leaderboard buttons */}
             <div style={{ display: "flex", gap: 8, justifyContent: "center", margin: "10px 0 18px" }}>
               {!submitted ? (
@@ -1731,6 +1946,7 @@ export default function DawgPoundDraft() {
               }}>↗ View Leaderboard</button>
             </div>
 
+            {/* Leaderboard Modal */}
             {showLeaderboard && (
               <div onClick={() => { setShowLeaderboard(false); setRosterPopup(null); }} style={{
                 position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 100,
@@ -1738,59 +1954,76 @@ export default function DawgPoundDraft() {
               }}>
                 <div onClick={e => e.stopPropagation()} style={{
                   background: "#130e08", border: "1px solid #2a1e10", borderRadius: 10,
-                  width: "100%", maxWidth: 500, maxHeight: "80vh", display: "flex",
+                  width: "100%", maxWidth: 520, maxHeight: "80vh", display: "flex",
                   flexDirection: "column", overflow: "hidden",
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "14px 16px", borderBottom: "1px solid #1e1508" }}>
-                    <span style={{ fontSize: 12, letterSpacing: "0.15em", color: "#ff9900",
-                      fontFamily: "inherit", textTransform: "uppercase" }}>🏆 Leaderboard</span>
+                    padding: "12px 16px", borderBottom: "1px solid #1e1508" }}>
+                    <span style={{ fontSize: 12, letterSpacing: "0.15em", color: "#ff9900", textTransform: "uppercase" }}>🏆 Leaderboard</span>
                     <button onClick={() => { setShowLeaderboard(false); setRosterPopup(null); }} style={{
-                      background: "none", border: "none", color: "#5a4030", fontSize: 18,
-                      cursor: "pointer", lineHeight: 1 }}>✕</button>
+                      background: "none", border: "none", color: "#5a4030", fontSize: 18, cursor: "pointer", lineHeight: 1 }}>✕</button>
+                  </div>
+                  {/* Mode filter */}
+                  <div style={{ display: "flex", gap: 6, padding: "10px 16px", borderBottom: "1px solid #1a1208" }}>
+                    {["all","classic","easy","chaos"].map(f => (
+                      <button key={f} onClick={() => setLeaderboardFilter(f)} style={{
+                        background: leaderboardFilter === f ? "#2a1e10" : "transparent",
+                        border: `1px solid ${leaderboardFilter === f ? "#5a3820" : "#2a1a10"}`,
+                        color: leaderboardFilter === f ? "#e0c090" : "#4a3020",
+                        fontSize: 10, padding: "3px 8px", borderRadius: 3, cursor: "pointer",
+                        fontFamily: "inherit", letterSpacing: "0.08em", textTransform: "uppercase",
+                      }}>{f === "all" ? "All" : f === "classic" ? "🏈 Classic" : f === "easy" ? "⭐ Easy" : "🌊 Chaos"}</button>
+                    ))}
                   </div>
                   <div style={{ overflowY: "auto", flex: 1 }}>
                     {leaderboardLoading ? (
                       <p style={{ color: "#5a4030", textAlign: "center", padding: 24, fontSize: 13 }}>Loading...</p>
-                    ) : leaderboardData.length === 0 ? (
-                      <p style={{ color: "#5a4030", textAlign: "center", padding: 24, fontSize: 13 }}>No entries yet. Be the first!</p>
-                    ) : (
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                        <thead>
-                          <tr style={{ borderBottom: "1px solid #1e1508" }}>
-                            {["#","Name","Record","Score","Roster"].map(h => (
-                              <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#5a4030",
-                                fontWeight: 500, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {leaderboardData.map((entry, i) => (
-                            <tr key={entry.id} style={{ borderBottom: "1px solid #1a1208",
-                              background: i%2===0 ? "transparent" : "#0d0a06" }}>
-                              <td style={{ padding: "9px 12px", color: "#3a2a18", fontSize: 11 }}>{i+1}</td>
-                              <td style={{ padding: "9px 12px", color: "#e0c090", fontWeight: 500 }}>{entry.name}</td>
-                              <td style={{ padding: "9px 12px", color: "#c09060" }}>{entry.record}</td>
-                              <td style={{ padding: "9px 12px", color: "#ff9900", fontWeight: 600 }}>{entry.score}</td>
-                              <td style={{ padding: "9px 12px" }}>
-                                <button onClick={() => setRosterPopup(rosterPopup?.id===entry.id ? null : {...entry.roster, id: entry.id})}
-                                  style={{ background: "#1e1508", border: "1px solid #2a1e10", color: "#a07040",
-                                    fontSize: 10, padding: "3px 8px", borderRadius: 3, cursor: "pointer",
-                                    letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                                  {rosterPopup?.id===entry.id ? "Hide" : "View"}
-                                </button>
-                              </td>
+                    ) : (() => {
+                      const filtered = leaderboardFilter === "all" ? leaderboardData
+                        : leaderboardData.filter(e => (e.mode || "classic") === leaderboardFilter);
+                      return filtered.length === 0 ? (
+                        <p style={{ color: "#5a4030", textAlign: "center", padding: 24, fontSize: 13 }}>No entries yet.</p>
+                      ) : (
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ borderBottom: "1px solid #1e1508" }}>
+                              {["#","Name","Record","Score","Mode","Roster"].map(h => (
+                                <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#5a4030",
+                                  fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{h}</th>
+                              ))}
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
+                          </thead>
+                          <tbody>
+                            {filtered.map((entry, i) => (
+                              <tr key={entry.id} style={{ borderBottom: "1px solid #1a1208",
+                                background: i%2===0 ? "transparent" : "#0d0a06" }}>
+                                <td style={{ padding: "8px 10px", color: "#3a2a18", fontSize: 11 }}>{i+1}</td>
+                                <td style={{ padding: "8px 10px", color: "#e0c090", fontWeight: 500 }}>{entry.name}</td>
+                                <td style={{ padding: "8px 10px", color: "#c09060" }}>{entry.record}</td>
+                                <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600 }}>{entry.score}</td>
+                                <td style={{ padding: "8px 10px", color: "#5a4030", fontSize: 10 }}>
+                                  {{ classic:"Classic", easy:"Easy", chaos:"Chaos" }[entry.mode || "classic"] || "Classic"}
+                                </td>
+                                <td style={{ padding: "8px 10px" }}>
+                                  <button onClick={() => setRosterPopup(rosterPopup?.id===entry.id ? null : {...entry.roster, id: entry.id})}
+                                    style={{ background: "#1e1508", border: "1px solid #2a1e10", color: "#a07040",
+                                      fontSize: 10, padding: "3px 8px", borderRadius: 3, cursor: "pointer",
+                                      letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                                    {rosterPopup?.id===entry.id ? "Hide" : "View"}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      );
+                    })()}
                     {rosterPopup && (
                       <div style={{ margin: "0 12px 12px", background: "#0d0a06",
                         border: "1px solid #2a1e10", borderRadius: 6, padding: "12px 14px" }}>
                         <p style={{ fontSize: 10, color: "#5a4030", textTransform: "uppercase",
                           letterSpacing: "0.1em", marginBottom: 8 }}>Roster</p>
-                        {SLOTS.map(slot => {
+                        {(mode === "easy" ? EASY_SLOTS : SLOTS).map(slot => {
                           const p = rosterPopup[slot.id]; if (!p) return null;
                           return (
                             <div key={slot.id} style={{ display: "flex", gap: 8, alignItems: "baseline",
@@ -1859,7 +2092,7 @@ export default function DawgPoundDraft() {
             <div style={{ marginBottom: 32 }}>
               <div style={{ fontSize: 10, letterSpacing: 4, color: "#3a2010", textTransform: "uppercase", marginBottom: 10 }}>Your Roster</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {SLOTS.map(s => {
+                {activeSlots.map(s => {
                   const p = roster[s.id];
                   return (
                     <div key={s.id} style={{ background: "#110a04", border: "1px solid #1e1006",
@@ -1876,8 +2109,12 @@ export default function DawgPoundDraft() {
             <div style={{ textAlign: "center" }}>
               <button onClick={() => {
                 setRoster({}); setRolledYear(null); setRollDisplay(null);
-                setUsedYears([]); setResult(null); setPhase("intro");
+                setRoster({}); setRolledYear(null); setRollDisplay(null);
+                setUsedYears([]); setResult(null); setMode("classic");
+                setRerollsLeft(0); setLakeEffect(null); setLakeEffectDone(false);
+                setInjuredSlotId(null); setInjuryDone(false);
                 setSubmitted(false); setShowNamePrompt(false); setPlayerName("");
+                setPhase("intro");
               }} style={btn("#2a1506", false, "#ff5500")}>
                 DRAFT AGAIN
               </button>
