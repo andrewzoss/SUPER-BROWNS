@@ -847,7 +847,7 @@ const EASY_SLOTS = [
   { id: "HC",   label: "HC",     icon: "📋", desc: "Head Coach" },
 ];
 
-const const EASY_WEIGHTS = { QB:18, RB:8, RB2:5, WR1:7, WR2:6, WR3:3, TE:5, OL:14, DEF1:9, DEF2:9, K:4, HC:12 };
+const EASY_WEIGHTS = { QB:18, RB:8, RB2:5, WR1:7, WR2:6, WR3:3, TE:5, OL:14, DEF1:9, DEF2:9, K:4, HC:12 };
 
 const LAKE_EFFECT_EVENTS = [
   { name: "Unsportsmanlike Conduct: Helmet Toss", desc: "Dwayne Rudd throws his helmet off celebrating before the play ends.", winMod: -1 },
