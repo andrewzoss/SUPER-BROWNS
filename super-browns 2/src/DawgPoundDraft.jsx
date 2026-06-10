@@ -841,8 +841,8 @@ const EASY_SLOTS = [
   { id: "TE",  label: "TE",  icon: "🔒", desc: "Tight End" },
   { id: "OL",  label: "OL",  icon: "🛡️", desc: "Offensive Line" },
   { id: "DEF", label: "DEF", icon: "🦅", desc: "Defense" },
-  { id: "HC",  label: "HC",  icon: "📋", desc: "Head Coach" },
   { id: "K",   label: "K",   icon: "🥾", desc: "Kicker" },
+  { id: "HC",  label: "HC",  icon: "📋", desc: "Head Coach" },
 ];
 
 const EASY_WEIGHTS = { QB:19, RB:10, RB2:7, WR1:7, WR2:6, TE:5, OL:13, DEF:14, HC:13, K:6 };
@@ -1430,6 +1430,46 @@ export default function DawgPoundDraft() {
 
   const activeSlots = mode === "easy" ? EASY_SLOTS : SLOTS;
 
+  // Lake Effect animation
+  useEffect(() => {
+    if (phase !== "lake_effect") return;
+    setLeAnimPhase("enter");
+    setLeSpinName("");
+    const enterTimer = setTimeout(() => {
+      setLeAnimPhase("spin");
+      const names = LAKE_EFFECT_EVENTS.map(e => e.name);
+      let tick = 0;
+      const maxTicks = 22;
+      const doTick = () => {
+        if (tick >= maxTicks) {
+          setTimeout(() => {
+            setLeSpinName(lakeEffect?.name || "");
+            setLeAnimPhase("reveal");
+          }, 150);
+          return;
+        }
+        setLeSpinName(names[tick % names.length]);
+        tick++;
+        const nextDelay = tick < 8 ? 80 : tick < 16 ? 130 : 210;
+        setTimeout(doTick, nextDelay);
+      };
+      doTick();
+    }, 800);
+    return () => clearTimeout(enterTimer);
+  }, [phase]);
+
+  // Injury flash animation
+  useEffect(() => {
+    if (phase !== "injury") return;
+    let count = 0;
+    const iv = setInterval(() => {
+      setInjFlash(f => !f);
+      count++;
+      if (count >= 8) clearInterval(iv);
+    }, 280);
+    return () => clearInterval(iv);
+  }, [phase]);
+
   const handleSubmit = async () => {
     if (!playerName.trim() || !result) return;
     setSubmitting(true);
@@ -1570,8 +1610,11 @@ export default function DawgPoundDraft() {
           </div>
           {phase === "intro" && (
           <div style={{ textAlign: "center", padding: "0 16px" }}>
-            <div style={{ fontSize: 10, letterSpacing: 4, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.7 }}>
-              Can the factory of sadness produce a winner by pooling together 27 years of questionable decisions? Roll the dice to find out. (Presumably how Sashi Brown landed on Corey Coleman)
+            <div style={{ textAlign: "center", letterSpacing: 4, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.8 }}>
+              <div>Can the factory of sadness produce a winner by pooling</div>
+              <div>together 27 years of questionable decisions?</div>
+              <div>Roll the dice to find out.</div>
+              <div style={{ fontSize: "0.75em", marginTop: 4, color: "#a08060" }}>(Presumably how Sashi Brown landed on Corey Coleman)</div>
             </div>
           </div>
           )}
@@ -1604,8 +1647,16 @@ export default function DawgPoundDraft() {
         {phase === "draft" && (
           <div style={{ marginTop: 16 }}>
 
+            {/* Easy mode feature label */}
+            {mode === "easy" && (
+              <div style={{ textAlign: "center", marginBottom: 10 }}>
+                <span style={{ fontSize: 9, letterSpacing: 3, color: "#4a3820", textTransform: "uppercase" }}>
+                  Kicker · Extra RB · One Reroll
+                </span>
+              </div>
+            )}
 
-            {/* 9-slot tracker */}
+            {/* Slot tracker */}
             <div style={{ background: "#110a04", border: "1px solid #1e1006", borderRadius: 6, marginBottom: 14, overflow: "hidden" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
                 padding: "6px 12px", borderBottom: "1px solid #1e1006" }}>
@@ -1706,7 +1757,7 @@ export default function DawgPoundDraft() {
                   // Names already on the roster (across any year/slot)
                   const draftedNames = new Set(Object.values(roster).map(p => p.name));
                   // All position groups present in this year's data
-                  const allBases = ["QB","RB","WR","TE","OL","DEF","HC"];
+                  const allBases = ["QB","RB","WR","TE","OL","DEF","K","HC"];
 
                   const posGroups = allBases.map(baseId => {
                     const players = yearData[baseId] || [];
@@ -1779,152 +1830,109 @@ export default function DawgPoundDraft() {
         )}
 
         {/* ── LAKE EFFECT (CHAOS) ── */}
-        {phase === "lake_effect" && lakeEffect && (() => {
-          // Animation driver — runs when we enter this phase
-          const AnimDriver = () => {
-            useEffect(() => {
-              setLeAnimPhase("enter");
-              setLeSpinName("");
-              const enterTimer = setTimeout(() => {
-                setLeAnimPhase("spin");
-                const names = LAKE_EFFECT_EVENTS.map(e => e.name);
-                let tick = 0;
-                const maxTicks = 22;
-                const spinInterval = setInterval(() => {
-                  setLeSpinName(names[tick % names.length]);
-                  tick++;
-                  if (tick >= maxTicks) {
-                    clearInterval(spinInterval);
-                    setTimeout(() => {
-                      setLeSpinName(lakeEffect.name);
-                      setLeAnimPhase("reveal");
-                    }, 120);
-                  }
-                }, tick < 8 ? 80 : tick < 16 ? 120 : 200);
-                return () => clearInterval(spinInterval);
-              }, 900);
-              return () => clearTimeout(enterTimer);
-            }, []);
-            return null;
-          };
+        {phase === "lake_effect" && lakeEffect && (
+          <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 50,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            padding: 24, textAlign: "center" }}>
 
-          return (
-            <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 50,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              padding: 24, textAlign: "center" }}>
-              <AnimDriver />
-
-              {/* Header */}
-              <div style={{
-                opacity: leAnimPhase === "enter" ? 0 : 1,
-                transform: leAnimPhase === "enter" ? "translateY(-20px)" : "translateY(0)",
-                transition: "opacity 0.6s ease, transform 0.6s ease",
-                marginBottom: 32,
-              }}>
-                <div style={{ fontSize: 36, marginBottom: 8, letterSpacing: 4 }}>🌊 ❄️</div>
-                <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 6,
-                  color: "#4a9adf", textTransform: "uppercase", fontFamily: "Georgia, serif" }}>
-                  Lake Effect
-                </div>
+            {/* Header */}
+            <div style={{
+              opacity: leAnimPhase === "enter" ? 0 : 1,
+              transform: leAnimPhase === "enter" ? "translateY(-20px)" : "translateY(0)",
+              transition: "opacity 0.6s ease, transform 0.6s ease",
+              marginBottom: 32,
+            }}>
+              <div style={{ fontSize: 36, marginBottom: 8, letterSpacing: 4 }}>🌊 ❄️</div>
+              <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 6,
+                color: "#4a9adf", textTransform: "uppercase", fontFamily: "Georgia, serif" }}>
+                Lake Effect
               </div>
+            </div>
 
-              {/* Spinner / reveal */}
-              {(leAnimPhase === "spin" || leAnimPhase === "reveal") && (
-                <div style={{ maxWidth: 360, width: "100%" }}>
+            {/* Spinner / reveal */}
+            {(leAnimPhase === "spin" || leAnimPhase === "reveal") && (
+              <div style={{ maxWidth: 360, width: "100%" }}>
+                <div style={{
+                  background: "#0d0a08",
+                  border: `1px solid ${leAnimPhase === "reveal" ? (lakeEffect.winMod > 0 ? "#4a7a30" : "#8a2020") : "#2a3a5a"}`,
+                  borderRadius: 10, padding: "20px 16px", transition: "border-color 0.4s",
+                }}>
                   <div style={{
-                    background: "#0d0a08", border: `1px solid ${leAnimPhase === "reveal" ? (lakeEffect.winMod > 0 ? "#4a7a30" : "#8a2020") : "#2a3a5a"}`,
-                    borderRadius: 10, padding: "20px 16px", transition: "border-color 0.4s",
+                    fontSize: leAnimPhase === "reveal" ? 15 : 13,
+                    fontWeight: 700,
+                    color: leAnimPhase === "reveal" ? "#e0c090" : "#5a7aaa",
+                    fontFamily: "Georgia, serif", lineHeight: 1.4, minHeight: 52,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "all 0.2s",
                   }}>
-                    <div style={{
-                      fontSize: leAnimPhase === "reveal" ? 15 : 13,
-                      fontWeight: 700, color: leAnimPhase === "reveal" ? "#e0c090" : "#5a7aaa",
-                      fontFamily: "Georgia, serif", lineHeight: 1.4, minHeight: 48,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      transition: "all 0.2s",
-                    }}>
-                      "{leSpinName}"
-                    </div>
-
-                    {leAnimPhase === "reveal" && (
-                      <div style={{ marginTop: 14, opacity: 1, transition: "opacity 0.4s" }}>
-                        <div style={{ fontSize: 13, color: "#7a6050", lineHeight: 1.6, marginBottom: 12 }}>
-                          {lakeEffect.desc}
-                        </div>
-                        <div style={{ fontSize: 24, fontWeight: 900,
-                          color: lakeEffect.winMod > 0 ? "#6aaa40" : "#cc4040" }}>
-                          {lakeEffect.winMod > 0 ? `+${lakeEffect.winMod}` : lakeEffect.winMod} Win{Math.abs(lakeEffect.winMod) !== 1 ? "s" : ""}
-                        </div>
-                      </div>
-                    )}
+                    "{leSpinName}"
                   </div>
 
                   {leAnimPhase === "reveal" && (
-                    <div style={{ marginTop: 24, textAlign: "center" }}>
-                      <button onClick={() => { setLeAnimPhase("enter"); setPhase("draft"); }}
-                        style={btn("#ff5500")}>Continue Draft</button>
+                    <div style={{ marginTop: 14 }}>
+                      <div style={{ fontSize: 13, color: "#7a6050", lineHeight: 1.6, marginBottom: 12 }}>
+                        {lakeEffect.desc}
+                      </div>
+                      <div style={{ fontSize: 26, fontWeight: 900,
+                        color: lakeEffect.winMod > 0 ? "#6aaa40" : "#cc4040" }}>
+                        {lakeEffect.winMod > 0 ? `+${lakeEffect.winMod}` : lakeEffect.winMod} Win{Math.abs(lakeEffect.winMod) !== 1 ? "s" : ""}
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          );
-        })()}
+
+                {leAnimPhase === "reveal" && (
+                  <div style={{ marginTop: 24, textAlign: "center" }}>
+                    <button onClick={() => { setLeAnimPhase("enter"); setPhase("draft"); }}
+                      style={btn("#ff5500")}>Continue Draft</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── INJURY (CHAOS) ── */}
-        {phase === "injury" && injuredSlotId && (() => {
-          const InjAnimDriver = () => {
-            useEffect(() => {
-              setInjFlash(true);
-              const t1 = setTimeout(() => setInjFlash(false), 300);
-              const t2 = setTimeout(() => setInjFlash(true), 600);
-              const t3 = setTimeout(() => setInjFlash(false), 900);
-              const t4 = setTimeout(() => setInjFlash(true), 1200);
-              return () => [t1,t2,t3,t4].forEach(clearTimeout);
-            }, []);
-            return null;
-          };
-          return (
-            <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 50,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              padding: 24, textAlign: "center" }}>
-              <InjAnimDriver />
-              <div style={{ fontSize: 36, marginBottom: 12 }}>🚑</div>
-              <div style={{
-                fontSize: 22, fontWeight: 900, letterSpacing: 6, textTransform: "uppercase",
-                fontFamily: "Georgia, serif", marginBottom: 28,
-                color: injFlash ? "#cc3030" : "#ff5555",
-                transition: "color 0.15s",
-              }}>
-                Injury Report
-              </div>
-              <div style={{ maxWidth: 340, width: "100%", marginBottom: 24 }}>
-                <div style={{ background: "#0d0a08", border: "1px solid #6a1a1a",
-                  borderRadius: 10, padding: "20px 16px" }}>
-                  <div style={{ fontSize: 12, color: "#6a4030", textTransform: "uppercase",
-                    letterSpacing: 2, marginBottom: 8 }}>
-                    {activeSlots.find(s => s.id === injuredSlotId)?.label} — Out for the season
-                  </div>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: "#e0c090", fontFamily: "Georgia, serif" }}>
-                    {roster[injuredSlotId]?.name}
-                  </div>
-                  <div style={{ fontSize: 13, color: "#4a3020", marginTop: 4 }}>
-                    {roster[injuredSlotId]?.year}
-                  </div>
-                </div>
-                <div style={{ fontSize: 12, color: "#4a3828", marginTop: 14, lineHeight: 1.6 }}>
-                  Roll once to find a replacement.
-                </div>
-              </div>
-              <button onClick={() => {
-                const newRoster = { ...roster };
-                delete newRoster[injuredSlotId];
-                setRoster(newRoster);
-                setInjuryDone(true);
-                setPhase("draft");
-              }} style={btn("#ff5500")}>Roll for Replacement</button>
+        {phase === "injury" && injuredSlotId && (
+          <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 50,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            padding: 24, textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🚑</div>
+            <div style={{
+              fontSize: 22, fontWeight: 900, letterSpacing: 6, textTransform: "uppercase",
+              fontFamily: "Georgia, serif", marginBottom: 28,
+              color: injFlash ? "#cc3030" : "#ff5555",
+              transition: "color 0.15s",
+            }}>
+              Injury Report
             </div>
-          );
-        })()}
+            <div style={{ maxWidth: 340, width: "100%", marginBottom: 24 }}>
+              <div style={{ background: "#0d0a08", border: "1px solid #6a1a1a",
+                borderRadius: 10, padding: "20px 16px" }}>
+                <div style={{ fontSize: 12, color: "#6a4030", textTransform: "uppercase",
+                  letterSpacing: 2, marginBottom: 8 }}>
+                  {activeSlots.find(s => s.id === injuredSlotId)?.label} — Out for the season
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: "#e0c090", fontFamily: "Georgia, serif" }}>
+                  {roster[injuredSlotId]?.name}
+                </div>
+                <div style={{ fontSize: 13, color: "#4a3020", marginTop: 4 }}>
+                  {roster[injuredSlotId]?.year}
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: "#4a3828", marginTop: 14, lineHeight: 1.6 }}>
+                Roll once to find a replacement.
+              </div>
+            </div>
+            <button onClick={() => {
+              const newRoster = { ...roster };
+              delete newRoster[injuredSlotId];
+              setRoster(newRoster);
+              setInjuryDone(true);
+              setPhase("draft");
+            }} style={btn("#ff5500")}>Roll for Replacement</button>
+          </div>
+        )}
 
         {/* ── SIMULATING ── */}
         {phase === "simulate" && (
