@@ -1606,7 +1606,7 @@ export default function DawgPoundDraft() {
       <div style={{ position: "fixed", inset: 0, opacity: 0.035, zIndex: 0, pointerEvents: "none",
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
         backgroundSize: "100px" }} />
-      <div style={{ height: 3, background: "linear-gradient(90deg, #c0300a, #ff5500, #ff8800, #ff5500, #c0300a)", position: "relative", zIndex: 2 }} />
+      {phase !== "lake_effect" && phase !== "injury" && <div style={{ height: 3, background: "linear-gradient(90deg, #c0300a, #ff5500, #ff8800, #ff5500, #c0300a)", position: "relative", zIndex: 2 }} />}
 
       <div style={{ maxWidth: 660, margin: "0 auto", padding: "0 18px 80px", position: "relative", zIndex: 1 }}>
 
@@ -1622,9 +1622,8 @@ export default function DawgPoundDraft() {
           {phase === "intro" && (
           <div style={{ textAlign: "center", padding: "0 16px" }}>
             <div style={{ textAlign: "center", fontSize: 10, letterSpacing: 2, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.8 }}>
-              <div>Can the factory of sadness produce a winner by pooling</div>
-              <div>together 27 years of questionable decisions?</div>
-              <div>Roll the dice to find out.</div>
+              <div>Can the factory of sadness produce a winner</div>
+              <div>pooling 27 years of questionable decisions? Roll the dice.</div>
               <div style={{ fontSize: "0.8em", marginTop: 4, color: "#a08060", letterSpacing: 1 }}>(Presumably how Sashi Brown landed on Corey Coleman)</div>
             </div>
           </div>
@@ -1645,6 +1644,7 @@ export default function DawgPoundDraft() {
                   background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
                   padding: "10px 14px", cursor: "pointer", textAlign: "center",
                   fontFamily: "Georgia, serif", minWidth: 0, flex: 1, maxWidth: 120,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 64,
                 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
                   <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 4, lineHeight: 1.4 }}>{m.sub}</div>
@@ -1706,9 +1706,9 @@ export default function DawgPoundDraft() {
               })}
               {/* Lake Effect slot — appears after event fires in Chaos mode */}
               {mode === "chaos" && lakeEffect && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderBottom: "1px solid #1a1208" }}>
-                  <span style={{ fontSize: 10, color: "#ff9900", width: 30, textTransform: "uppercase", letterSpacing: 1, flexShrink: 0 }}>🌊</span>
-                  <span style={{ fontSize: 12, color: lakeEffect.winMod > 0 ? "#6a9a40" : "#c04040", fontStyle: "italic" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 12px", borderBottom: "1px solid #1a1208" }}>
+                  <div style={{ width: 32, fontSize: 9, letterSpacing: 1, color: "#ff9900", flexShrink: 0 }}>🌊</div>
+                  <span style={{ fontSize: 12, color: lakeEffect.winMod > 0 ? "#6a9a40" : "#c04040", fontStyle: "italic", fontWeight: 600 }}>
                     {lakeEffect.name} ({lakeEffect.winMod > 0 ? "+" : ""}{lakeEffect.winMod}W)
                   </span>
                 </div>
@@ -1813,7 +1813,22 @@ export default function DawgPoundDraft() {
                                       <div style={{ fontWeight: 700, fontSize: 14, color: alreadyDrafted ? "#5a3820" : "#f0e6d3" }}>{player.name}</div>
                                       {alreadyDrafted && <div style={{ fontSize: 10, color: "#5a3820", letterSpacing: 2, textTransform: "uppercase", marginLeft: 10, whiteSpace: "nowrap" }}>Already on team</div>}
                                     </div>
-                                    <div style={{ fontSize: 11, color: "#6a4020", lineHeight: 1.55, marginBottom: canPick ? 10 : 0 }}>{player.stats}</div>
+                                    <div style={{ fontSize: 11, color: "#6a4020", lineHeight: 1.55, marginBottom: canPick ? 10 : 0 }}>{
+                                    baseId === "DEF1" ? (() => {
+                                      const s = player.stats;
+                                      const rank    = s.match(/Pass D[:\s·]+\d+(?:st|nd|rd|th)/i)?.[0] || "";
+                                      const sacks   = s.match(/Pass rush:[^.]+/i)?.[0] || "";
+                                      const ints    = s.match(/INTs:[^.]+/i)?.[0] || "";
+                                      return [rank, sacks, ints].filter(Boolean).join(". ");
+                                    })() :
+                                    baseId === "DEF2" ? (() => {
+                                      const s = player.stats;
+                                      const rank     = s.match(/Run D[:\s·]+\d+(?:st|nd|rd|th)/i)?.[0] || "";
+                                      const tacklers = s.match(/Top tacklers:[^.]+/i)?.[0] || "";
+                                      return [rank, tacklers].filter(Boolean).join(". ");
+                                    })() :
+                                    player.stats
+                                  }</div>
                                     {canPick && (
                                       <button onClick={() => pickPlayer(openSlots[0].id, player, rolledYear)}
                                         style={{ background: "#ff5500", border: "none", borderRadius: 3,
@@ -1962,51 +1977,51 @@ export default function DawgPoundDraft() {
           </div>
         )}
 
-        {/* ── DEPTH CHART (EASY) ── */}
+                {/* ── DEPTH CHART (EASY) ── */}
         {phase === "depth_chart" && (
-          <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 12, letterSpacing: 4, color: "#ff9900", textTransform: "uppercase", marginBottom: 6 }}>Depth Chart</div>
-              <div style={{ fontSize: 11, color: "#3a2a18", letterSpacing: 1 }}>Higher slots carry more weight — put your best players first</div>
+          <div style={{ marginTop: 16 }}>
+            <div style={{ textAlign: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, letterSpacing: 3, color: "#ff9900", textTransform: "uppercase", marginBottom: 4 }}>Depth Chart</div>
+              <div style={{ fontSize: 10, color: "#3a2a18", letterSpacing: 1 }}>Reorder RBs and WRs — higher slots carry more weight</div>
             </div>
-
-            {[
-              { label: "RB Depth", slots: ["RB","RB2"], weights: [8,5] },
-              { label: "WR Depth", slots: ["WR1","WR2","WR3"], weights: [7,6,3] },
-              { label: "Defense", slots: ["DEF1","DEF2"], weights: [9,9], note: "equal weight" },
-            ].map(({ label, slots, weights, note }) => (
-              <div key={label} style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 10, letterSpacing: 3, color: "#5a4030", textTransform: "uppercase", marginBottom: 10 }}>
-                  {label}{note && <span style={{ color: "#2a1e10", marginLeft: 8, letterSpacing: 1, textTransform: "none" }}>· {note}</span>}
-                </div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  {slots.map((slotId, i) => {
-                    const slotNames = { RB:"RB1", RB2:"RB2", WR1:"WR1", WR2:"WR2", WR3:"WR3", DEF1:"PASS D", DEF2:"RUN D" };
-                    const p = roster[slotId];
-                    return (
-                      <div key={slotId} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                        <div style={{ background: "#130e08", border: "1px solid #2a1a10", borderRadius: 6,
-                          padding: "10px 8px", width: "100%", textAlign: "center" }}>
-                          <div style={{ fontSize: 9, color: "#5a4030", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>
-                            {slotNames[slotId]} · {weights[i]}%
-                          </div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "#e0c090", lineHeight: 1.3 }}>{p?.name}</div>
-                          <div style={{ fontSize: 11, color: "#4a3020", marginTop: 2 }}>{p?.year}</div>
-                        </div>
-                        {i < slots.length - 1 && (
-                          <button onClick={() => swapRoster(slotId, slots[i + 1])} style={{
-                            background: "#1a1008", border: "1px solid #3a2a18", borderRadius: 4,
-                            color: "#6a4a28", fontSize: 14, padding: "3px 8px", cursor: "pointer", lineHeight: 1,
-                          }}>&#8644;</button>
-                        )}
+            <div style={{ background: "#110a04", border: "1px solid #1e1006", borderRadius: 6, overflow: "hidden", marginBottom: 16 }}>
+              {activeSlots.map((slot, i) => {
+                const pick = roster[slot.id];
+                const group = ["RB","RB2"].includes(slot.id) ? ["RB","RB2"] : ["WR1","WR2","WR3"].includes(slot.id) ? ["WR1","WR2","WR3"] : null;
+                const groupIdx = group ? group.indexOf(slot.id) : -1;
+                return (
+                  <div key={slot.id} style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "6px 12px",
+                    borderBottom: i < activeSlots.length - 1 ? "1px solid #160d06" : "none",
+                    background: "#140c05",
+                  }}>
+                    <div style={{ width: 32, fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#ff5500", flexShrink: 0 }}>
+                      {slot.label}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#c4a882", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {pick ? pick.name : "—"}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#5a3820", flexShrink: 0 }}>{pick ? ("'" + String(pick.year).slice(2)) : ""}</div>
+                    {group && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 1, flexShrink: 0 }}>
+                        <button disabled={groupIdx === 0} onClick={() => swapRoster(slot.id, group[groupIdx - 1])} style={{
+                          background: groupIdx === 0 ? "transparent" : "#1e1208", border: "none",
+                          color: groupIdx === 0 ? "#2a1a0a" : "#8a5030", fontSize: 10, padding: "1px 5px",
+                          cursor: groupIdx === 0 ? "default" : "pointer", lineHeight: 1, borderRadius: 2,
+                        }}>&#9650;</button>
+                        <button disabled={groupIdx === group.length - 1} onClick={() => swapRoster(slot.id, group[groupIdx + 1])} style={{
+                          background: groupIdx === group.length - 1 ? "transparent" : "#1e1208", border: "none",
+                          color: groupIdx === group.length - 1 ? "#2a1a0a" : "#8a5030", fontSize: 10, padding: "1px 5px",
+                          cursor: groupIdx === group.length - 1 ? "default" : "pointer", lineHeight: 1, borderRadius: 2,
+                        }}>&#9660;</button>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-
-            <div style={{ textAlign: "center", marginTop: 8 }}>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ textAlign: "center" }}>
               <button onClick={simulateSeason} style={btn("#ff5500")}>&#127967;  Simulate Season</button>
             </div>
           </div>
@@ -2312,7 +2327,7 @@ export default function DawgPoundDraft() {
           </div>
         )}
       </div>
-      <div style={{ height: 3, background: "linear-gradient(90deg, #c0300a, #ff5500, #ff8800, #ff5500, #c0300a)", position: "relative", zIndex: 2 }} />
+      {phase !== "lake_effect" && phase !== "injury" && <div style={{ height: 3, background: "linear-gradient(90deg, #c0300a, #ff5500, #ff8800, #ff5500, #c0300a)", position: "relative", zIndex: 2 }} />}
 
       {/* Legal Disclaimer */}
       <div style={{
