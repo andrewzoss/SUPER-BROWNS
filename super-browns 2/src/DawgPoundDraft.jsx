@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient.js";
 
 // ─── COMPLETE BROWNS DATA 1999-2025 ───────────────────────────────────────────
@@ -1414,6 +1414,9 @@ export default function DawgPoundDraft() {
   const [lakeEffectDone, setLakeEffectDone] = useState(false);
   const [injuredSlotId, setInjuredSlotId] = useState(null);
   const [injuryDone, setInjuryDone] = useState(false);
+  const [leAnimPhase, setLeAnimPhase] = useState("enter"); // "enter" | "spin" | "reveal"
+  const [leSpinName, setLeSpinName] = useState("");
+  const [injFlash, setInjFlash] = useState(true);
 
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
@@ -1452,7 +1455,7 @@ export default function DawgPoundDraft() {
   };
 
   const filledSlots = activeSlots.filter(s => roster[s.id]);
-  const unfilledSlots = getUnfilledSlots(roster);
+  const unfilledSlots = activeSlots.filter(s => !roster[s.id]);
   const allFilled = unfilledSlots.length === 0;
 
 
@@ -1578,22 +1581,19 @@ export default function DawgPoundDraft() {
         {phase === "intro" && (
           <div style={{ textAlign: "center", marginTop: 32, padding: "0 16px" }}>
             <div style={{ fontSize: 11, letterSpacing: 3, color: "#c4a882", textTransform: "uppercase", marginBottom: 28 }}>Select Mode</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 340, margin: "0 auto" }}>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 8 }}>
               {[
-                { id: "classic", label: "Classic", icon: "🏈", desc: "8 slots · standard draft" },
-                { id: "easy",    label: "Easy",    icon: "⭐", desc: "10 slots · extra RB · Kicker · 1 Reroll" },
-                { id: "chaos",   label: "Chaos",   icon: "🌊", desc: "8 slots · Lake Effect event · Injury risk" },
+                { id: "classic", label: "Classic" },
+                { id: "easy",    label: "Easy"    },
+                { id: "chaos",   label: "Chaos"   },
               ].map(m => (
                 <button key={m.id} onClick={() => startMode(m.id)} style={{
-                  background: "#130e08", border: "1px solid #3a2a18", borderRadius: 8,
-                  padding: "16px 20px", cursor: "pointer", textAlign: "left", display: "flex",
-                  alignItems: "center", gap: 14, transition: "border-color 0.2s",
+                  background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
+                  padding: "10px 20px", cursor: "pointer", textAlign: "center",
+                  fontSize: 13, fontWeight: 700, color: "#e0c090", letterSpacing: "0.1em",
+                  textTransform: "uppercase", fontFamily: "Georgia, serif",
                 }}>
-                  <span style={{ fontSize: 24 }}>{m.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#e0c090", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "Georgia, serif" }}>{m.label}</div>
-                    <div style={{ fontSize: 11, color: "#5a4030", marginTop: 3, letterSpacing: "0.04em" }}>{m.desc}</div>
-                  </div>
+                  {m.label}
                 </button>
               ))}
             </div>
@@ -1685,6 +1685,21 @@ export default function DawgPoundDraft() {
                   </div>
                 </div>
 
+                {/* Reroll button for Easy mode — right below the dice */}
+                {mode === "easy" && rerollsLeft > 0 && rolledYear && (
+                  <div style={{ textAlign: "center", marginTop: 10 }}>
+                    <button onClick={() => {
+                      setRolledYear(null); setRollDisplay(null);
+                      setRerollsLeft(r => r - 1);
+                      setTimeout(() => rollDice(), 100);
+                    }} style={{ background: "transparent", border: "1px solid #3a6a20", color: "#6a9a40",
+                      fontSize: 11, padding: "5px 14px", borderRadius: 4, cursor: "pointer",
+                      fontFamily: "inherit", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                      🎲 Reroll ({rerollsLeft} left)
+                    </button>
+                  </div>
+                )}
+
                 {/* All positions from rolled year — show everyone, gray out already-drafted names */}
                 {rolledYear && (() => {
                   const yearData = BROWNS_DATA[rolledYear];
@@ -1759,68 +1774,157 @@ export default function DawgPoundDraft() {
               </div>
             )}
 
-            {/* Reroll button for Easy mode */}
-            {mode === "easy" && rerollsLeft > 0 && rolledYear && (
-              <div style={{ textAlign: "center", marginTop: 8 }}>
-                <button onClick={() => {
-                  setRolledYear(null); setRollDisplay(null);
-                  setRerollsLeft(r => r - 1);
-                  setTimeout(() => rollDice(), 100);
-                }} style={{ background: "transparent", border: "1px solid #3a6a20", color: "#6a9a40",
-                  fontSize: 11, padding: "6px 16px", borderRadius: 4, cursor: "pointer",
-                  fontFamily: "inherit", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                  🎲 Reroll Year ({rerollsLeft} left)
-                </button>
-              </div>
-            )}
+
           </div>
         )}
 
         {/* ── LAKE EFFECT (CHAOS) ── */}
-        {phase === "lake_effect" && lakeEffect && (
-          <div style={{ padding: "24px 20px", maxWidth: 420, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>🌊</div>
-              <div style={{ fontSize: 11, letterSpacing: 3, color: "#ff9900", textTransform: "uppercase", marginBottom: 12 }}>Lake Effect</div>
-              <div style={{ background: "#130e08", border: `1px solid ${lakeEffect.winMod > 0 ? "#4a7a30" : "#8a2020"}`, borderRadius: 10, padding: "20px 16px" }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#e0c090", fontFamily: "Georgia, serif", marginBottom: 10, lineHeight: 1.4 }}>
-                  "{lakeEffect.name}"
-                </div>
-                <div style={{ fontSize: 13, color: "#8a7060", lineHeight: 1.6, marginBottom: 14 }}>{lakeEffect.desc}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: lakeEffect.winMod > 0 ? "#6a9a40" : "#c04040" }}>
-                  {lakeEffect.winMod > 0 ? `+${lakeEffect.winMod}` : lakeEffect.winMod} Win{Math.abs(lakeEffect.winMod) !== 1 ? "s" : ""}
+        {phase === "lake_effect" && lakeEffect && (() => {
+          // Animation driver — runs when we enter this phase
+          const AnimDriver = () => {
+            useEffect(() => {
+              setLeAnimPhase("enter");
+              setLeSpinName("");
+              const enterTimer = setTimeout(() => {
+                setLeAnimPhase("spin");
+                const names = LAKE_EFFECT_EVENTS.map(e => e.name);
+                let tick = 0;
+                const maxTicks = 22;
+                const spinInterval = setInterval(() => {
+                  setLeSpinName(names[tick % names.length]);
+                  tick++;
+                  if (tick >= maxTicks) {
+                    clearInterval(spinInterval);
+                    setTimeout(() => {
+                      setLeSpinName(lakeEffect.name);
+                      setLeAnimPhase("reveal");
+                    }, 120);
+                  }
+                }, tick < 8 ? 80 : tick < 16 ? 120 : 200);
+                return () => clearInterval(spinInterval);
+              }, 900);
+              return () => clearTimeout(enterTimer);
+            }, []);
+            return null;
+          };
+
+          return (
+            <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 50,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              padding: 24, textAlign: "center" }}>
+              <AnimDriver />
+
+              {/* Header */}
+              <div style={{
+                opacity: leAnimPhase === "enter" ? 0 : 1,
+                transform: leAnimPhase === "enter" ? "translateY(-20px)" : "translateY(0)",
+                transition: "opacity 0.6s ease, transform 0.6s ease",
+                marginBottom: 32,
+              }}>
+                <div style={{ fontSize: 36, marginBottom: 8, letterSpacing: 4 }}>🌊 ❄️</div>
+                <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 6,
+                  color: "#4a9adf", textTransform: "uppercase", fontFamily: "Georgia, serif" }}>
+                  Lake Effect
                 </div>
               </div>
+
+              {/* Spinner / reveal */}
+              {(leAnimPhase === "spin" || leAnimPhase === "reveal") && (
+                <div style={{ maxWidth: 360, width: "100%" }}>
+                  <div style={{
+                    background: "#0d0a08", border: `1px solid ${leAnimPhase === "reveal" ? (lakeEffect.winMod > 0 ? "#4a7a30" : "#8a2020") : "#2a3a5a"}`,
+                    borderRadius: 10, padding: "20px 16px", transition: "border-color 0.4s",
+                  }}>
+                    <div style={{
+                      fontSize: leAnimPhase === "reveal" ? 15 : 13,
+                      fontWeight: 700, color: leAnimPhase === "reveal" ? "#e0c090" : "#5a7aaa",
+                      fontFamily: "Georgia, serif", lineHeight: 1.4, minHeight: 48,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "all 0.2s",
+                    }}>
+                      "{leSpinName}"
+                    </div>
+
+                    {leAnimPhase === "reveal" && (
+                      <div style={{ marginTop: 14, opacity: 1, transition: "opacity 0.4s" }}>
+                        <div style={{ fontSize: 13, color: "#7a6050", lineHeight: 1.6, marginBottom: 12 }}>
+                          {lakeEffect.desc}
+                        </div>
+                        <div style={{ fontSize: 24, fontWeight: 900,
+                          color: lakeEffect.winMod > 0 ? "#6aaa40" : "#cc4040" }}>
+                          {lakeEffect.winMod > 0 ? `+${lakeEffect.winMod}` : lakeEffect.winMod} Win{Math.abs(lakeEffect.winMod) !== 1 ? "s" : ""}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {leAnimPhase === "reveal" && (
+                    <div style={{ marginTop: 24, textAlign: "center" }}>
+                      <button onClick={() => { setLeAnimPhase("enter"); setPhase("draft"); }}
+                        style={btn("#ff5500")}>Continue Draft</button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <button onClick={() => setPhase("draft")} style={btn("#ff5500")}>Continue Draft</button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── INJURY (CHAOS) ── */}
-        {phase === "injury" && injuredSlotId && (
-          <div style={{ padding: "24px 20px", maxWidth: 420, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>🚑</div>
-              <div style={{ fontSize: 11, letterSpacing: 3, color: "#ff5500", textTransform: "uppercase", marginBottom: 12 }}>Injury Report</div>
-              <div style={{ background: "#130e08", border: "1px solid #8a2020", borderRadius: 10, padding: "20px 16px", marginBottom: 16 }}>
-                <div style={{ fontSize: 13, color: "#8a7060", marginBottom: 6 }}>
-                  {activeSlots.find(s => s.id === injuredSlotId)?.label} — Down for the season
+        {phase === "injury" && injuredSlotId && (() => {
+          const InjAnimDriver = () => {
+            useEffect(() => {
+              setInjFlash(true);
+              const t1 = setTimeout(() => setInjFlash(false), 300);
+              const t2 = setTimeout(() => setInjFlash(true), 600);
+              const t3 = setTimeout(() => setInjFlash(false), 900);
+              const t4 = setTimeout(() => setInjFlash(true), 1200);
+              return () => [t1,t2,t3,t4].forEach(clearTimeout);
+            }, []);
+            return null;
+          };
+          return (
+            <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 50,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              padding: 24, textAlign: "center" }}>
+              <InjAnimDriver />
+              <div style={{ fontSize: 36, marginBottom: 12 }}>🚑</div>
+              <div style={{
+                fontSize: 22, fontWeight: 900, letterSpacing: 6, textTransform: "uppercase",
+                fontFamily: "Georgia, serif", marginBottom: 28,
+                color: injFlash ? "#cc3030" : "#ff5555",
+                transition: "color 0.15s",
+              }}>
+                Injury Report
+              </div>
+              <div style={{ maxWidth: 340, width: "100%", marginBottom: 24 }}>
+                <div style={{ background: "#0d0a08", border: "1px solid #6a1a1a",
+                  borderRadius: 10, padding: "20px 16px" }}>
+                  <div style={{ fontSize: 12, color: "#6a4030", textTransform: "uppercase",
+                    letterSpacing: 2, marginBottom: 8 }}>
+                    {activeSlots.find(s => s.id === injuredSlotId)?.label} — Out for the season
+                  </div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: "#e0c090", fontFamily: "Georgia, serif" }}>
+                    {roster[injuredSlotId]?.name}
+                  </div>
+                  <div style={{ fontSize: 13, color: "#4a3020", marginTop: 4 }}>
+                    {roster[injuredSlotId]?.year}
+                  </div>
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#e0c090", fontFamily: "Georgia, serif" }}>
-                  {roster[injuredSlotId]?.name} ({roster[injuredSlotId]?.year})
+                <div style={{ fontSize: 12, color: "#4a3828", marginTop: 14, lineHeight: 1.6 }}>
+                  Roll once to find a replacement.
                 </div>
               </div>
-              <div style={{ fontSize: 13, color: "#5a4030", marginBottom: 16 }}>Roll once to find a replacement.</div>
+              <button onClick={() => {
+                const newRoster = { ...roster };
+                delete newRoster[injuredSlotId];
+                setRoster(newRoster);
+                setInjuryDone(true);
+                setPhase("draft");
+              }} style={btn("#ff5500")}>Roll for Replacement</button>
             </div>
-            <button onClick={() => {
-              const newRoster = { ...roster };
-              delete newRoster[injuredSlotId];
-              setRoster(newRoster);
-              setInjuryDone(true);
-              setPhase("draft");
-            }} style={btn("#ff5500")}>Roll for Replacement</button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── SIMULATING ── */}
         {phase === "simulate" && (
