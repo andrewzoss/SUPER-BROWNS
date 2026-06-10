@@ -1620,8 +1620,8 @@ export default function DawgPoundDraft() {
             />
           </div>
           {phase === "intro" && (
-          <div style={{ textAlign: "center", padding: "0 16px" }}>
-            <div style={{ textAlign: "center", fontSize: 9, letterSpacing: 0, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.9 }}>
+          <div style={{ textAlign: "center", padding: "0 8px" }}>
+            <div style={{ textAlign: "center", fontSize: 11, letterSpacing: 0, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.9 }}>
               <div>Can the factory of sadness produce a winner</div>
               <div>pooling together 27 years of questionable decisions?</div>
               <div>Roll the dice to find out.</div>
@@ -1656,7 +1656,7 @@ export default function DawgPoundDraft() {
                     background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
                     padding: "10px 14px", cursor: "pointer", textAlign: "center",
                     fontFamily: "Georgia, serif", flex: 1,
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 52,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", minHeight: 52,
                   }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
                     <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3, lineHeight: 1.4 }}>{m.sub}</div>
