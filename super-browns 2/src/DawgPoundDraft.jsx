@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "./supabaseClient.js";
 
 // ─── COMPLETE BROWNS DATA 1999-2025 ───────────────────────────────────────────
@@ -1954,64 +1954,54 @@ export default function DawgPoundDraft() {
         )}
 
         {/* ── DEPTH CHART (EASY) ── */}
-        {phase === "depth_chart" && (() => {
-          const swapSlots = (idA, idB) => {
-            setRoster(prev => ({ ...prev, [idA]: prev[idB], [idB]: prev[idA] }));
-          };
-
-          const depthGroups = [
-            { label: "RB Depth", slots: ["RB","RB2"], weights: [8,5] },
-            { label: "WR Depth", slots: ["WR1","WR2","WR3"], weights: [7,6,3] },
-            { label: "Defense", slots: ["DEF1","DEF2"], weights: [9,9], note: "equal weight · order doesn't affect score" },
-          ];
-
-          const slotLabel = id => ({ RB:"RB1", RB2:"RB2", WR1:"WR1", WR2:"WR2", WR3:"WR3", DEF1:"PASS D", DEF2:"RUN D" }[id] || id);
-
-          return (
-            <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
-              <div style={{ textAlign: "center", marginBottom: 24 }}>
-                <div style={{ fontSize: 12, letterSpacing: 4, color: "#ff9900", textTransform: "uppercase", marginBottom: 6 }}>Depth Chart</div>
-                <div style={{ fontSize: 11, color: "#3a2a18", letterSpacing: 1 }}>Higher slots carry more weight — put your best players first</div>
-              </div>
-
-              {depthGroups.map(({ label, slots, weights, note }) => (
-                <div key={label} style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 10, letterSpacing: 3, color: "#5a4030", textTransform: "uppercase", marginBottom: 10 }}>
-                    {label}{note && <span style={{ color: "#2a1e10", marginLeft: 8, letterSpacing: 1, textTransform: "none" }}>· {note}</span>}
-                  </div>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    {slots.map((slotId, i) => {
-                      const p = roster[slotId];
-                      return (
-                        <div key={slotId} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                          <div style={{ background: "#130e08", border: "1px solid #2a1a10", borderRadius: 6,
-                            padding: "10px 8px", width: "100%", textAlign: "center" }}>
-                            <div style={{ fontSize: 9, color: "#5a4030", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>
-                              {slotLabel(slotId)} · {weights[i]}%
-                            </div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#e0c090", lineHeight: 1.3 }}>{p?.name}</div>
-                            <div style={{ fontSize: 11, color: "#4a3020", marginTop: 2 }}>{p?.year}</div>
-                          </div>
-                          {i < slots.length - 1 && (
-                            <button onClick={() => swapSlots(slotId, slots[i+1])} style={{
-                              background: "#1a1008", border: "1px solid #3a2a18", borderRadius: 4,
-                              color: "#6a4a28", fontSize: 14, padding: "3px 8px", cursor: "pointer",
-                              lineHeight: 1, alignSelf: "center",
-                            }}>⇄</button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-
-              <div style={{ textAlign: "center", marginTop: 8 }}>
-                <button onClick={simulateSeason} style={btn("#ff5500")}>🏟️  Simulate Season</button>
-              </div>
+        {phase === "depth_chart" && (
+          <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 12, letterSpacing: 4, color: "#ff9900", textTransform: "uppercase", marginBottom: 6 }}>Depth Chart</div>
+              <div style={{ fontSize: 11, color: "#3a2a18", letterSpacing: 1 }}>Higher slots carry more weight — put your best players first</div>
             </div>
-          );
-        })()}
+
+            {[
+              { label: "RB Depth", slots: ["RB","RB2"], weights: [8,5] },
+              { label: "WR Depth", slots: ["WR1","WR2","WR3"], weights: [7,6,3] },
+              { label: "Defense", slots: ["DEF1","DEF2"], weights: [9,9], note: "equal weight" },
+            ].map(({ label, slots, weights, note }) => (
+              <div key={label} style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 10, letterSpacing: 3, color: "#5a4030", textTransform: "uppercase", marginBottom: 10 }}>
+                  {label}{note && <span style={{ color: "#2a1e10", marginLeft: 8, letterSpacing: 1, textTransform: "none" }}>· {note}</span>}
+                </div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  {slots.map((slotId, i) => {
+                    const slotNames = { RB:"RB1", RB2:"RB2", WR1:"WR1", WR2:"WR2", WR3:"WR3", DEF1:"PASS D", DEF2:"RUN D" };
+                    const p = roster[slotId];
+                    return (
+                      <div key={slotId} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                        <div style={{ background: "#130e08", border: "1px solid #2a1a10", borderRadius: 6,
+                          padding: "10px 8px", width: "100%", textAlign: "center" }}>
+                          <div style={{ fontSize: 9, color: "#5a4030", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>
+                            {slotNames[slotId]} · {weights[i]}%
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#e0c090", lineHeight: 1.3 }}>{p?.name}</div>
+                          <div style={{ fontSize: 11, color: "#4a3020", marginTop: 2 }}>{p?.year}</div>
+                        </div>
+                        {i < slots.length - 1 && (
+                          <button onClick={() => swapRoster(slotId, slots[i + 1])} style={{
+                            background: "#1a1008", border: "1px solid #3a2a18", borderRadius: 4,
+                            color: "#6a4a28", fontSize: 14, padding: "3px 8px", cursor: "pointer", lineHeight: 1,
+                          }}>&#8644;</button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ textAlign: "center", marginTop: 8 }}>
+              <button onClick={simulateSeason} style={btn("#ff5500")}>&#127967;  Simulate Season</button>
+            </div>
+          </div>
+        )}
 
         {/* ── SIMULATING ── */}
         {phase === "simulate" && (
