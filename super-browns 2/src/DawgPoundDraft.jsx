@@ -1621,7 +1621,7 @@ export default function DawgPoundDraft() {
           </div>
           {phase === "intro" && (
           <div style={{ textAlign: "center", padding: "0 16px" }}>
-            <div style={{ textAlign: "center", fontSize: 10, letterSpacing: 1, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.8 }}>
+            <div style={{ textAlign: "center", fontSize: 9, letterSpacing: 0, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.9 }}>
               <div>Can the factory of sadness produce a winner</div>
               <div>pooling together 27 years of questionable decisions?</div>
               <div>Roll the dice to find out.</div>
@@ -1634,8 +1634,8 @@ export default function DawgPoundDraft() {
         {/* ── INTRO / MODE SELECT ── */}
         {phase === "intro" && (
           <div style={{ textAlign: "center", marginTop: 32, padding: "0 16px" }}>
-            <div style={{ fontSize: 11, letterSpacing: 3, color: "#c4a882", textTransform: "uppercase", marginBottom: 28 }}>Select Mode</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+            <div style={{ fontSize: 11, letterSpacing: 3, color: "#c4a882", textTransform: "uppercase", marginBottom: 10 }}>Select Mode</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
               {/* Classic — full width */}
               <button onClick={() => startMode("classic")} style={{
                 background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
@@ -1649,7 +1649,7 @@ export default function DawgPoundDraft() {
               {/* Easy + Chaos — side by side */}
               <div style={{ display: "flex", gap: 10 }}>
                 {[
-                  { id: "easy",  label: "Easy",  sub: "Big Roster · Reroll" },
+                  { id: "easy",  label: "Easy",  sub: "Big Roster · Repeat Years · Reroll" },
                   { id: "chaos", label: "Chaos", sub: "Lake Effect · Injury" },
                 ].map(m => (
                   <button key={m.id} onClick={() => startMode(m.id)} style={{
