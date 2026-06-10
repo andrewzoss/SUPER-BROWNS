@@ -1610,11 +1610,11 @@ export default function DawgPoundDraft() {
           </div>
           {phase === "intro" && (
           <div style={{ textAlign: "center", padding: "0 16px" }}>
-            <div style={{ textAlign: "center", letterSpacing: 4, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.8 }}>
+            <div style={{ textAlign: "center", fontSize: 10, letterSpacing: 4, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.8 }}>
               <div>Can the factory of sadness produce a winner by pooling</div>
               <div>together 27 years of questionable decisions?</div>
               <div>Roll the dice to find out.</div>
-              <div style={{ fontSize: "0.75em", marginTop: 4, color: "#a08060" }}>(Presumably how Sashi Brown landed on Corey Coleman)</div>
+              <div style={{ fontSize: "0.8em", marginTop: 4, color: "#a08060" }}>(Presumably how Sashi Brown landed on Corey Coleman)</div>
             </div>
           </div>
           )}
