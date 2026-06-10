@@ -1515,7 +1515,7 @@ export default function DawgPoundDraft() {
     setIsRolling(true);
     setRolledYear(null);
     let ticks = 0;
-    const availableYears = YEARS.filter(y => !usedYears.includes(y));
+    const availableYears = mode === "easy" ? YEARS : YEARS.filter(y => !usedYears.includes(y));
     const pool = availableYears.length > 0 ? availableYears : YEARS;
     const total = 18 + Math.floor(Math.random() * 12);
     const iv = setInterval(() => {
@@ -1621,9 +1621,10 @@ export default function DawgPoundDraft() {
           </div>
           {phase === "intro" && (
           <div style={{ textAlign: "center", padding: "0 16px" }}>
-            <div style={{ textAlign: "center", fontSize: 10, letterSpacing: 2, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.8 }}>
+            <div style={{ textAlign: "center", fontSize: 10, letterSpacing: 1, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.8 }}>
               <div>Can the factory of sadness produce a winner</div>
-              <div>pooling 27 years of questionable decisions? Roll the dice.</div>
+              <div>pooling together 27 years of questionable decisions?</div>
+              <div>Roll the dice to find out.</div>
               <div style={{ fontSize: "0.8em", marginTop: 4, color: "#a08060", letterSpacing: 1 }}>(Presumably how Sashi Brown landed on Corey Coleman)</div>
             </div>
           </div>
@@ -1634,22 +1635,34 @@ export default function DawgPoundDraft() {
         {phase === "intro" && (
           <div style={{ textAlign: "center", marginTop: 32, padding: "0 16px" }}>
             <div style={{ fontSize: 11, letterSpacing: 3, color: "#c4a882", textTransform: "uppercase", marginBottom: 28 }}>Select Mode</div>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 8 }}>
-              {[
-                { id: "classic", label: "Classic", sub: "Painful" },
-                { id: "easy",    label: "Easy",    sub: "Big Roster · Reroll" },
-                { id: "chaos",   label: "Chaos",   sub: "Lake Effect · Injury" },
-              ].map(m => (
-                <button key={m.id} onClick={() => startMode(m.id)} style={{
-                  background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
-                  padding: "10px 14px", cursor: "pointer", textAlign: "center",
-                  fontFamily: "Georgia, serif", minWidth: 0, flex: 1, maxWidth: 120,
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 64,
-                }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
-                  <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 4, lineHeight: 1.4 }}>{m.sub}</div>
-                </button>
-              ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+              {/* Classic — full width */}
+              <button onClick={() => startMode("classic")} style={{
+                background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
+                padding: "10px 14px", cursor: "pointer", textAlign: "center",
+                fontFamily: "Georgia, serif", width: "100%",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 52,
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Classic</div>
+                <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3 }}>Painful</div>
+              </button>
+              {/* Easy + Chaos — side by side */}
+              <div style={{ display: "flex", gap: 10 }}>
+                {[
+                  { id: "easy",  label: "Easy",  sub: "Big Roster · Reroll" },
+                  { id: "chaos", label: "Chaos", sub: "Lake Effect · Injury" },
+                ].map(m => (
+                  <button key={m.id} onClick={() => startMode(m.id)} style={{
+                    background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
+                    padding: "10px 14px", cursor: "pointer", textAlign: "center",
+                    fontFamily: "Georgia, serif", flex: 1,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 52,
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
+                    <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3, lineHeight: 1.4 }}>{m.sub}</div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -1662,7 +1675,7 @@ export default function DawgPoundDraft() {
             {mode === "easy" && (
               <div style={{ textAlign: "center", marginBottom: 10 }}>
                 <span style={{ fontSize: 9, letterSpacing: 3, color: "#4a3820", textTransform: "uppercase" }}>
-                  Kicker · Extra RB · Extra WR · Defense Split · One Reroll
+                  Kicker · Extra RB · Extra WR · Defense Split · Repeat Years · One Reroll
                 </span>
               </div>
             )}
@@ -1810,7 +1823,11 @@ export default function DawgPoundDraft() {
                                     border: `1px solid ${alreadyDrafted ? "#1e1006" : positionFull ? "#1e1006" : "#3a1e08"}`,
                                     borderRadius: 5, padding: "13px 15px", opacity: (alreadyDrafted || positionFull) ? 0.5 : 1 }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                                      <div style={{ fontWeight: 700, fontSize: 14, color: alreadyDrafted ? "#5a3820" : "#f0e6d3" }}>{player.name}</div>
+                                      <div style={{ fontWeight: 700, fontSize: 14, color: alreadyDrafted ? "#5a3820" : "#f0e6d3" }}>{
+                                        baseId === "DEF1" ? player.name.replace("Defense", "Pass Defense") :
+                                        baseId === "DEF2" ? player.name.replace("Defense", "Run Defense") :
+                                        player.name
+                                      }</div>
                                       {alreadyDrafted && <div style={{ fontSize: 10, color: "#5a3820", letterSpacing: 2, textTransform: "uppercase", marginLeft: 10, whiteSpace: "nowrap" }}>Already on team</div>}
                                     </div>
                                     <div style={{ fontSize: 11, color: "#6a4020", lineHeight: 1.55, marginBottom: canPick ? 10 : 0 }}>{
