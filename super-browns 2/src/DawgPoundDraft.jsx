@@ -1621,11 +1621,11 @@ export default function DawgPoundDraft() {
           </div>
           {phase === "intro" && (
           <div style={{ textAlign: "center", padding: "0 16px" }}>
-            <div style={{ textAlign: "center", fontSize: 10, letterSpacing: 4, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.8 }}>
+            <div style={{ textAlign: "center", fontSize: 10, letterSpacing: 2, color: "#c4a882", textTransform: "uppercase", lineHeight: 1.8 }}>
               <div>Can the factory of sadness produce a winner by pooling</div>
               <div>together 27 years of questionable decisions?</div>
               <div>Roll the dice to find out.</div>
-              <div style={{ fontSize: "0.8em", marginTop: 4, color: "#a08060" }}>(Presumably how Sashi Brown landed on Corey Coleman)</div>
+              <div style={{ fontSize: "0.8em", marginTop: 4, color: "#a08060", letterSpacing: 1 }}>(Presumably how Sashi Brown landed on Corey Coleman)</div>
             </div>
           </div>
           )}
@@ -1638,16 +1638,16 @@ export default function DawgPoundDraft() {
             <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 8 }}>
               {[
                 { id: "classic", label: "Classic", sub: "Painful" },
-                { id: "easy",    label: "Easy",    sub: "Big Roster, One Reroll" },
-                { id: "chaos",   label: "Chaos",   sub: "Lake Effect, Injury" },
+                { id: "easy",    label: "Easy",    sub: "Big Roster · Reroll" },
+                { id: "chaos",   label: "Chaos",   sub: "Lake Effect · Injury" },
               ].map(m => (
                 <button key={m.id} onClick={() => startMode(m.id)} style={{
                   background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
-                  padding: "10px 20px", cursor: "pointer", textAlign: "center",
-                  fontFamily: "Georgia, serif",
+                  padding: "10px 14px", cursor: "pointer", textAlign: "center",
+                  fontFamily: "Georgia, serif", minWidth: 0, flex: 1, maxWidth: 120,
                 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#e0c090", letterSpacing: "0.1em", textTransform: "uppercase" }}>{m.label}</div>
-                  <div style={{ fontSize: 9, color: "#4a3020", letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 4 }}>{m.sub}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
+                  <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 4, lineHeight: 1.4 }}>{m.sub}</div>
                 </button>
               ))}
             </div>
@@ -1768,15 +1768,24 @@ export default function DawgPoundDraft() {
                   // Names already on the roster (across any year/slot)
                   const draftedNames = new Set(Object.values(roster).map(p => p.name));
                   // All position groups present in this year's data
-                  const allBases = ["QB","RB","WR","TE","OL","DEF","K","HC"];
+                  const allBases = mode === "easy"
+                    ? ["QB","RB","WR","TE","OL","DEF1","DEF2","K","HC"]
+                    : ["QB","RB","WR","TE","OL","DEF","HC"];
 
                   const posGroups = allBases.map(baseId => {
-                    const players = yearData[baseId] || [];
+                    const dataKey = (baseId === "DEF1" || baseId === "DEF2") ? "DEF" : baseId;
+                    const players = yearData[dataKey] || [];
                     if (players.length === 0) return null;
-                    const openSlots = unfilledSlots.filter(s => getBaseId(s.id) === baseId);
-                    const slotMeta = openSlots.length > 0
-                      ? activeSlots.find(s => s.id === openSlots[0].id)
-                      : activeSlots.find(s => getBaseId(s.id) === baseId);
+                    let openSlots, slotMeta;
+                    if (baseId === "DEF1" || baseId === "DEF2") {
+                      openSlots = unfilledSlots.filter(s => s.id === baseId);
+                      slotMeta = activeSlots.find(s => s.id === baseId);
+                    } else {
+                      openSlots = unfilledSlots.filter(s => getBaseId(s.id) === baseId);
+                      slotMeta = openSlots.length > 0
+                        ? activeSlots.find(s => s.id === openSlots[0].id)
+                        : activeSlots.find(s => getBaseId(s.id) === baseId);
+                    }
                     return { baseId, players, openSlots, icon: slotMeta?.icon, label: slotMeta?.label };
                   }).filter(Boolean);
 
@@ -1850,7 +1859,7 @@ export default function DawgPoundDraft() {
 
         {/* ── LAKE EFFECT (CHAOS) ── */}
         {phase === "lake_effect" && lakeEffect && (
-          <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 50,
+          <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 9999,
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             padding: 24, textAlign: "center" }}>
 
@@ -1913,7 +1922,7 @@ export default function DawgPoundDraft() {
 
         {/* ── INJURY (CHAOS) ── */}
         {phase === "injury" && injuredSlotId && (
-          <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 50,
+          <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 9999,
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             padding: 24, textAlign: "center" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🚑</div>
