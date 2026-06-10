@@ -833,19 +833,21 @@ const SLOTS = [
 ];
 
 const EASY_SLOTS = [
-  { id: "QB",  label: "QB",  icon: "🏈", desc: "Quarterback" },
-  { id: "RB",  label: "RB",  icon: "💨", desc: "Running Back" },
-  { id: "RB2", label: "RB",  icon: "💨", desc: "Running Back 2" },
-  { id: "WR1", label: "WR",  icon: "⚡", desc: "Wide Receiver 1" },
-  { id: "WR2", label: "WR",  icon: "⚡", desc: "Wide Receiver 2" },
-  { id: "TE",  label: "TE",  icon: "🔒", desc: "Tight End" },
-  { id: "OL",  label: "OL",  icon: "🛡️", desc: "Offensive Line" },
-  { id: "DEF", label: "DEF", icon: "🦅", desc: "Defense" },
-  { id: "K",   label: "K",   icon: "🥾", desc: "Kicker" },
-  { id: "HC",  label: "HC",  icon: "📋", desc: "Head Coach" },
+  { id: "QB",   label: "QB",     icon: "🏈", desc: "Quarterback" },
+  { id: "RB",   label: "RB",     icon: "💨", desc: "Running Back" },
+  { id: "RB2",  label: "RB",     icon: "💨", desc: "Running Back 2" },
+  { id: "WR1",  label: "WR",     icon: "⚡", desc: "Wide Receiver 1" },
+  { id: "WR2",  label: "WR",     icon: "⚡", desc: "Wide Receiver 2" },
+  { id: "WR3",  label: "WR",     icon: "⚡", desc: "Wide Receiver 3" },
+  { id: "TE",   label: "TE",     icon: "🔒", desc: "Tight End" },
+  { id: "OL",   label: "OL",     icon: "🛡️", desc: "Offensive Line" },
+  { id: "DEF1", label: "PASS D", icon: "🦅", desc: "Pass Defense" },
+  { id: "DEF2", label: "RUN D",  icon: "🦅", desc: "Run Defense" },
+  { id: "K",    label: "K",      icon: "🥾", desc: "Kicker" },
+  { id: "HC",   label: "HC",     icon: "📋", desc: "Head Coach" },
 ];
 
-const EASY_WEIGHTS = { QB:19, RB:10, RB2:7, WR1:7, WR2:6, TE:5, OL:13, DEF:14, HC:13, K:6 };
+const const EASY_WEIGHTS = { QB:18, RB:8, RB2:5, WR1:7, WR2:6, WR3:3, TE:5, OL:14, DEF1:9, DEF2:9, K:4, HC:12 };
 
 const LAKE_EFFECT_EVENTS = [
   { name: "Unsportsmanlike Conduct: Helmet Toss", desc: "Dwayne Rudd throws his helmet off celebrating before the play ends.", winMod: -1 },
@@ -980,12 +982,21 @@ function scorePlayer(slotId, player) {
   }
 
   if (baseId === "DEF") {
-    s = 5; // pure rankings only — ignore all keyword signals
+    s = 5;
     const rScoreDEF = (r) => r <= 3 ? 4.5 : r <= 7 ? 3 : r <= 12 ? 1.5 : r <= 18 ? 0 : r <= 24 ? -1.5 : r <= 28 ? -2.5 : -4;
     const passM = stats.match(/pass\s*d[:\s·]+(\d+)/i);
-    if (passM) s += rScoreDEF(parseInt(passM[1])) * 0.55;
-    const runM = stats.match(/run\s*d[:\s·]+(\d+)/i);
-    if (runM) s += rScoreDEF(parseInt(runM[1])) * 0.45;
+    const runM  = stats.match(/run\s*d[:\s·]+(\d+)/i);
+    if (slotId === "DEF1") {
+      // Easy mode Pass D — purely pass ranking
+      if (passM) s += rScoreDEF(parseInt(passM[1]));
+    } else if (slotId === "DEF2") {
+      // Easy mode Run D — purely run ranking
+      if (runM) s += rScoreDEF(parseInt(runM[1]));
+    } else {
+      // Classic combined DEF
+      if (passM) s += rScoreDEF(parseInt(passM[1])) * 0.55;
+      if (runM)  s += rScoreDEF(parseInt(runM[1]))  * 0.45;
+    }
   }
 
   if (baseId === "K") {
@@ -1626,17 +1637,17 @@ export default function DawgPoundDraft() {
             <div style={{ fontSize: 11, letterSpacing: 3, color: "#c4a882", textTransform: "uppercase", marginBottom: 28 }}>Select Mode</div>
             <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 8 }}>
               {[
-                { id: "classic", label: "Classic" },
-                { id: "easy",    label: "Easy"    },
-                { id: "chaos",   label: "Chaos"   },
+                { id: "classic", label: "Classic", sub: "Painful" },
+                { id: "easy",    label: "Easy",    sub: "Big Roster, One Reroll" },
+                { id: "chaos",   label: "Chaos",   sub: "Lake Effect, Injury" },
               ].map(m => (
                 <button key={m.id} onClick={() => startMode(m.id)} style={{
                   background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
                   padding: "10px 20px", cursor: "pointer", textAlign: "center",
-                  fontSize: 13, fontWeight: 700, color: "#e0c090", letterSpacing: "0.1em",
-                  textTransform: "uppercase", fontFamily: "Georgia, serif",
+                  fontFamily: "Georgia, serif",
                 }}>
-                  {m.label}
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#e0c090", letterSpacing: "0.1em", textTransform: "uppercase" }}>{m.label}</div>
+                  <div style={{ fontSize: 9, color: "#4a3020", letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 4 }}>{m.sub}</div>
                 </button>
               ))}
             </div>
@@ -1651,7 +1662,7 @@ export default function DawgPoundDraft() {
             {mode === "easy" && (
               <div style={{ textAlign: "center", marginBottom: 10 }}>
                 <span style={{ fontSize: 9, letterSpacing: 3, color: "#4a3820", textTransform: "uppercase" }}>
-                  Kicker · Extra RB · One Reroll
+                  Kicker · Extra RB · Extra WR · Defense Split · One Reroll
                 </span>
               </div>
             )}
@@ -1763,7 +1774,9 @@ export default function DawgPoundDraft() {
                     const players = yearData[baseId] || [];
                     if (players.length === 0) return null;
                     const openSlots = unfilledSlots.filter(s => getBaseId(s.id) === baseId);
-                    const slotMeta = activeSlots.find(s => getBaseId(s.id) === baseId);
+                    const slotMeta = openSlots.length > 0
+                      ? activeSlots.find(s => s.id === openSlots[0].id)
+                      : activeSlots.find(s => getBaseId(s.id) === baseId);
                     return { baseId, players, openSlots, icon: slotMeta?.icon, label: slotMeta?.label };
                   }).filter(Boolean);
 
@@ -1819,9 +1832,15 @@ export default function DawgPoundDraft() {
 
             {allFilled && (
               <div style={{ textAlign: "center", marginTop: 8 }}>
-                <button onClick={simulateSeason} style={btn("#ff5500")}>
-                  🏟️  SIMULATE SEASON
-                </button>
+                {mode === "easy" ? (
+                  <button onClick={() => setPhase("depth_chart")} style={btn("#ff5500")}>
+                    📋  Set Depth Chart
+                  </button>
+                ) : (
+                  <button onClick={simulateSeason} style={btn("#ff5500")}>
+                    🏟️  SIMULATE SEASON
+                  </button>
+                )}
               </div>
             )}
 
@@ -1900,7 +1919,7 @@ export default function DawgPoundDraft() {
             <div style={{ fontSize: 36, marginBottom: 12 }}>🚑</div>
             <div style={{
               fontSize: 22, fontWeight: 900, letterSpacing: 6, textTransform: "uppercase",
-              fontFamily: "Georgia, serif", marginBottom: 28,
+              fontFamily: "Georgia, serif", marginBottom: 36, paddingBottom: 4,
               color: injFlash ? "#cc3030" : "#ff5555",
               transition: "color 0.15s",
             }}>
@@ -1933,6 +1952,66 @@ export default function DawgPoundDraft() {
             }} style={btn("#ff5500")}>Roll for Replacement</button>
           </div>
         )}
+
+        {/* ── DEPTH CHART (EASY) ── */}
+        {phase === "depth_chart" && (() => {
+          const swapSlots = (idA, idB) => {
+            setRoster(prev => ({ ...prev, [idA]: prev[idB], [idB]: prev[idA] }));
+          };
+
+          const depthGroups = [
+            { label: "RB Depth", slots: ["RB","RB2"], weights: [8,5] },
+            { label: "WR Depth", slots: ["WR1","WR2","WR3"], weights: [7,6,3] },
+            { label: "Defense", slots: ["DEF1","DEF2"], weights: [9,9], note: "equal weight · order doesn't affect score" },
+          ];
+
+          const slotLabel = id => ({ RB:"RB1", RB2:"RB2", WR1:"WR1", WR2:"WR2", WR3:"WR3", DEF1:"PASS D", DEF2:"RUN D" }[id] || id);
+
+          return (
+            <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
+              <div style={{ textAlign: "center", marginBottom: 24 }}>
+                <div style={{ fontSize: 12, letterSpacing: 4, color: "#ff9900", textTransform: "uppercase", marginBottom: 6 }}>Depth Chart</div>
+                <div style={{ fontSize: 11, color: "#3a2a18", letterSpacing: 1 }}>Higher slots carry more weight — put your best players first</div>
+              </div>
+
+              {depthGroups.map(({ label, slots, weights, note }) => (
+                <div key={label} style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 10, letterSpacing: 3, color: "#5a4030", textTransform: "uppercase", marginBottom: 10 }}>
+                    {label}{note && <span style={{ color: "#2a1e10", marginLeft: 8, letterSpacing: 1, textTransform: "none" }}>· {note}</span>}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    {slots.map((slotId, i) => {
+                      const p = roster[slotId];
+                      return (
+                        <div key={slotId} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          <div style={{ background: "#130e08", border: "1px solid #2a1a10", borderRadius: 6,
+                            padding: "10px 8px", width: "100%", textAlign: "center" }}>
+                            <div style={{ fontSize: 9, color: "#5a4030", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>
+                              {slotLabel(slotId)} · {weights[i]}%
+                            </div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#e0c090", lineHeight: 1.3 }}>{p?.name}</div>
+                            <div style={{ fontSize: 11, color: "#4a3020", marginTop: 2 }}>{p?.year}</div>
+                          </div>
+                          {i < slots.length - 1 && (
+                            <button onClick={() => swapSlots(slotId, slots[i+1])} style={{
+                              background: "#1a1008", border: "1px solid #3a2a18", borderRadius: 4,
+                              color: "#6a4a28", fontSize: 14, padding: "3px 8px", cursor: "pointer",
+                              lineHeight: 1, alignSelf: "center",
+                            }}>⇄</button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <div style={{ textAlign: "center", marginTop: 8 }}>
+                <button onClick={simulateSeason} style={btn("#ff5500")}>🏟️  Simulate Season</button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── SIMULATING ── */}
         {phase === "simulate" && (
