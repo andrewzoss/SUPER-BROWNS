@@ -1515,7 +1515,7 @@ export default function DawgPoundDraft() {
     setIsRolling(true);
     setRolledYear(null);
     let ticks = 0;
-    const availableYears = mode === "easy" ? YEARS : YEARS.filter(y => !usedYears.includes(y));
+    const availableYears = YEARS.filter(y => !usedYears.includes(y));
     const pool = availableYears.length > 0 ? availableYears : YEARS;
     const total = 18 + Math.floor(Math.random() * 12);
     const iv = setInterval(() => {
@@ -1649,7 +1649,7 @@ export default function DawgPoundDraft() {
               {/* Easy + Chaos — side by side */}
               <div style={{ display: "flex", gap: 10 }}>
                 {[
-                  { id: "easy",  label: "Easy",  sub: "Big Roster · Repeat Years · Reroll", subMt: 3 },
+                  { id: "easy",  label: "Easy",  sub: "Big Roster · Reroll", subMt: 3 },
                   { id: "chaos", label: "Chaos", sub: "Lake Effect · Injury", subMt: 9 },
                 ].map(m => (
                   <button key={m.id} onClick={() => startMode(m.id)} style={{
@@ -1675,7 +1675,7 @@ export default function DawgPoundDraft() {
             {mode === "easy" && (
               <div style={{ textAlign: "center", marginBottom: 10 }}>
                 <span style={{ fontSize: 9, letterSpacing: 3, color: "#4a3820", textTransform: "uppercase" }}>
-                  Kicker · Extra RB · Extra WR · Defense Split · Repeat Years · One Reroll
+                  Kicker · Extra RB · Extra WR · Defense Split · One Reroll
                 </span>
               </div>
             )}
