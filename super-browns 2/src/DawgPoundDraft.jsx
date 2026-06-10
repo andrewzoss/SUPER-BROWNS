@@ -1649,8 +1649,8 @@ export default function DawgPoundDraft() {
               {/* Easy + Chaos — side by side */}
               <div style={{ display: "flex", gap: 10 }}>
                 {[
-                  { id: "easy",  label: "Easy",  sub: "Big Roster · Repeat Years · Reroll" },
-                  { id: "chaos", label: "Chaos", sub: "Lake Effect · Injury" },
+                  { id: "easy",  label: "Easy",  sub: "Big Roster · Repeat Years · Reroll", subMt: 3 },
+                  { id: "chaos", label: "Chaos", sub: "Lake Effect · Injury", subMt: 9 },
                 ].map(m => (
                   <button key={m.id} onClick={() => startMode(m.id)} style={{
                     background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
@@ -1659,7 +1659,7 @@ export default function DawgPoundDraft() {
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", minHeight: 52,
                   }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
-                    <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3, lineHeight: 1.4, textAlign: "center", width: "100%" }}>{m.sub}</div>
+                    <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: m.subMt || 3, lineHeight: 1.4, textAlign: "center", width: "100%" }}>{m.sub}</div>
                   </button>
                 ))}
               </div>
