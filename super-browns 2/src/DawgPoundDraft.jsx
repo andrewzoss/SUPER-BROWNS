@@ -1067,11 +1067,12 @@ function gradeLabel(score) {
 function runSimulation(roster, mode = "classic", lakeEffectMod = 0) {
   const weights = mode === "easy" ? EASY_WEIGHTS
     : { QB: 21, RB: 12, WR1: 7, WR2: 7, TE: 5, OL: 15, DEF: 18, HC: 15 };
+  const simSlots = mode === "easy" ? EASY_SLOTS : SLOTS;
   const scores = {};
-  for (const slot of SLOTS) scores[slot.id] = scorePlayer(slot.id, roster[slot.id]);
+  for (const slot of simSlots) scores[slot.id] = scorePlayer(slot.id, roster[slot.id]);
 
   let totalW = 0, totalScore = 0;
-  for (const slot of SLOTS) {
+  for (const slot of simSlots) {
     const w = weights[slot.id] || 5;
     totalScore += scores[slot.id] * w;
     totalW += w;
@@ -1079,7 +1080,6 @@ function runSimulation(roster, mode = "classic", lakeEffectMod = 0) {
   const avg = totalScore / totalW;
 
   // Map avg score (1-10) to wins (1-16)
-  // Calibrated so avg=5 → ~7 wins, avg=7 → ~11 wins, avg=8.5 → ~14 wins
   const rawWins = (avg - 1) * 2 - 1;
   const baseWins = Math.max(0, Math.min(17, Math.round(rawWins)));
   const wins = Math.max(0, Math.min(17, baseWins + lakeEffectMod));
@@ -1089,35 +1089,38 @@ function runSimulation(roster, mode = "classic", lakeEffectMod = 0) {
   const offSlots = ["QB","RB","WR1","WR2","TE"];
   const offSimW = { QB: 21, RB: 12, WR1: 8, WR2: 7, TE: 5 };
   const offWSum = offSlots.reduce((a, id) => a + offSimW[id], 0);
-  const offWScore = offSlots.reduce((a, id) => a + scores[id] * offSimW[id], 0);
-  const offAvg = offWScore / offWSum;
-  const offWithOL = (offWScore + scores.OL * 15) / (offWSum + 15);
+  const offWScore = offSlots.reduce((a, id) => a + (scores[id] || 5) * offSimW[id], 0);
+  const offWithOL = (offWScore + (scores.OL || 5) * 15) / (offWSum + 15);
+
+  // Defense grade: Easy averages DEF1+DEF2; others use DEF
+  const defScore = mode === "easy"
+    ? ((scores.DEF1 || 5) + (scores.DEF2 || 5)) / 2
+    : (scores.DEF || 5);
 
   const grades = {
     Offense: gradeLabel(offWithOL),
-    Defense: gradeLabel(scores.DEF),
-    Coaching: gradeLabel(scores.HC),
+    Defense: gradeLabel(defScore),
+    Coaching: gradeLabel(scores.HC || 5),
   };
 
   // MVP: highest impact (score × weight)
   let mvpId = "QB", mvpImpact = 0;
-  for (const slot of SLOTS) {
-    const impact = scores[slot.id] * (weights[slot.id] || 5);
+  for (const slot of simSlots) {
+    const impact = (scores[slot.id] || 5) * (weights[slot.id] || 5);
     if (impact > mvpImpact) { mvpImpact = impact; mvpId = slot.id; }
   }
 
   // Liability: lowest score among positions with weight >= 5
   let liabilityId = "QB", liabilityScore = 99;
-  for (const slot of SLOTS) {
-    if ((weights[slot.id] || 5) >= 5 && scores[slot.id] < liabilityScore) {
-      liabilityScore = scores[slot.id]; liabilityId = slot.id;
+  for (const slot of simSlots) {
+    if ((weights[slot.id] || 5) >= 5 && (scores[slot.id] || 5) < liabilityScore) {Score = scores[slot.id]; liabilityId = slot.id;
     }
   }
 
   const mvpPlayer = roster[mvpId];
-  const mvpSlot = SLOTS.find(s => s.id === mvpId);
+  const mvpSlot = simSlots.find(s => s.id === mvpId);
   const liabilityPlayer = roster[liabilityId];
-  const liabilitySlot = SLOTS.find(s => s.id === liabilityId);
+  const liabilitySlot = simSlots.find(s => s.id === liabilityId);
 
   const tier = wins >= 13 ? "super" : wins >= 11 ? "great" : wins >= 9 ? "good" : wins >= 7 ? "avg" : wins >= 5 ? "bad" : "awful";
 
