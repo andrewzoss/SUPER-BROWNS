@@ -861,6 +861,30 @@ const LAKE_EFFECT_EVENTS = [
   { name: "DePodesta'd", desc: "Paul's algorithm wants to see Cody Kessler in on this drive.", winMod: -1 },
 ];
 
+const WEEK18_EVENTS = [
+  { name: "Interim Coach",           desc: "Your HC got fired. The team is inspired by a new voice.", winMod: +1 },
+  { name: "Fuck Them Picks",         desc: "Win a meaningless week 18 game.",                         winMod: +1 },
+  { name: "Hue in The Lake",         desc: "Get in The Lake, Hue!",                                   winMod: -1 },
+  { name: "Trot Out the Day 3 Rookie", desc: "Hey, maybe he's got something!",                        winMod: -1 },
+];
+
+function getDraftPick(wins) {
+  if (wins === 0)  return "#1 Overall";
+  if (wins === 1)  return "#2 Overall";
+  if (wins === 2)  return "#3 Overall";
+  if (wins <= 3)   return "#4–5 Pick";
+  if (wins <= 4)   return "#6–8 Pick";
+  if (wins <= 5)   return "#9–12 Pick";
+  if (wins <= 6)   return "#13–16 Pick";
+  if (wins <= 7)   return "#17–20 Pick";
+  if (wins <= 8)   return "#21–23 Pick";
+  if (wins <= 9)   return "#24–26 Pick";
+  if (wins <= 10)  return "#27–28 Pick";
+  if (wins <= 11)  return "Late 1st Round";
+  if (wins <= 12)  return "#31 Pick";
+  return "#32 (Last Pick)";
+}
+
 function getBaseId(slotId) {
   return slotId.replace(/\d+$/, "");
 }
@@ -1428,6 +1452,9 @@ export default function DawgPoundDraft() {
   const [leAnimPhase, setLeAnimPhase] = useState("enter"); // "enter" | "spin" | "reveal"
   const [leSpinName, setLeSpinName] = useState("");
   const [injFlash, setInjFlash] = useState(true);
+  const [week18Event, setWeek18Event] = useState(null);
+  const [week18AnimPhase, setWeek18AnimPhase] = useState("enter");
+  const [week18SpinName, setWeek18SpinName] = useState("");
 
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
@@ -1481,6 +1508,33 @@ export default function DawgPoundDraft() {
     return () => clearInterval(iv);
   }, [phase]);
 
+  // Week 18 animation (Tank mode)
+  useEffect(() => {
+    if (phase !== "week18") return;
+    setWeek18AnimPhase("enter");
+    setWeek18SpinName("");
+    const enterTimer = setTimeout(() => {
+      setWeek18AnimPhase("spin");
+      const names = WEEK18_EVENTS.map(e => e.name);
+      let tick = 0;
+      const maxTicks = 20;
+      const doTick = () => {
+        if (tick >= maxTicks) {
+          setTimeout(() => {
+            setWeek18SpinName(week18Event?.name || "");
+            setWeek18AnimPhase("reveal");
+          }, 150);
+          return;
+        }
+        setWeek18SpinName(names[tick % names.length]);
+        tick++;
+        setTimeout(doTick, tick < 8 ? 80 : tick < 16 ? 130 : 210);
+      };
+      doTick();
+    }, 800);
+    return () => clearTimeout(enterTimer);
+  }, [phase]);
+
   const handleSubmit = async () => {
     if (!playerName.trim() || !result) return;
     setSubmitting(true);
@@ -1491,6 +1545,7 @@ export default function DawgPoundDraft() {
     const { error } = await supabase.from("leaderboard").insert({
       name: playerName.trim(), record: result.record, wins: result.wins,
       score: result.teamScore, roster: rosterSnapshot, mode,
+      ...(mode === "tank" ? { draft_pick: getDraftPick(result.wins) } : {}),
     });
     setSubmitting(false);
     if (error) { alert("Couldn't save: " + error.message); return; }
@@ -1499,7 +1554,9 @@ export default function DawgPoundDraft() {
   };
 
   const handleViewLeaderboard = async () => {
-    setShowLeaderboard(true); setLeaderboardLoading(true);
+    setShowLeaderboard(true);
+    setLeaderboardLoading(true);
+    if (mode === "tank") setLeaderboardFilter("tank");
     const { data } = await supabase.from("leaderboard").select("*")
       .order("score", { ascending: false }).order("wins", { ascending: false }).limit(100);
     setLeaderboardData(data || []); setLeaderboardLoading(false);
@@ -1575,6 +1632,9 @@ export default function DawgPoundDraft() {
     setLakeEffectDone(false);
     setInjuredSlotId(null);
     setInjuryDone(false);
+    setWeek18Event(null);
+    setWeek18AnimPhase("enter");
+    setWeek18SpinName("");
     setRoster({});
     setUsedYears([]);
     setResult(null);
@@ -1582,6 +1642,14 @@ export default function DawgPoundDraft() {
   }
 
   function simulateSeason() {
+    if (mode === "tank") {
+      const event = WEEK18_EVENTS[Math.floor(Math.random() * WEEK18_EVENTS.length)];
+      setWeek18Event(event);
+      setWeek18AnimPhase("enter");
+      setWeek18SpinName("");
+      setPhase("week18");
+      return;
+    }
     setPhase("simulate");
     setTimeout(() => {
       const result = runSimulation(roster, mode, lakeEffect?.winMod || 0);
@@ -1636,30 +1704,37 @@ export default function DawgPoundDraft() {
           <div style={{ textAlign: "center", marginTop: 32, padding: "0 16px" }}>
             <div style={{ fontSize: 11, letterSpacing: 3, color: "#c4a882", textTransform: "uppercase", marginBottom: 10 }}>Select Mode</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
-              {/* Classic — full width */}
-              <button onClick={() => startMode("classic")} style={{
-                background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
-                padding: "10px 14px", cursor: "pointer", textAlign: "center",
-                fontFamily: "Georgia, serif", width: "100%",
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 52,
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Classic</div>
-                <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3 }}>Painful</div>
-              </button>
-              {/* Easy + Chaos — side by side */}
-              <div style={{ display: "flex", gap: 10 }}>
+              {/* Row 1: Classic + Tank */}
+              <div style={{ display: "flex", gap: 8 }}>
                 {[
-                  { id: "easy",  label: "Easy",  sub: "Big Roster · Reroll", subMt: 3 },
-                  { id: "chaos", label: "Chaos", sub: "Lake Effect · Injury", subMt: 9 },
+                  { id: "classic", label: "Classic", sub: "Painful" },
+                  { id: "tank",    label: "Tank",    sub: "Week 18 · Draft Pick" },
                 ].map(m => (
                   <button key={m.id} onClick={() => startMode(m.id)} style={{
                     background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
                     padding: "10px 14px", cursor: "pointer", textAlign: "center",
                     fontFamily: "Georgia, serif", flex: 1,
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", minHeight: 52,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 52,
                   }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
-                    <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: m.subMt || 3, lineHeight: 1.4, textAlign: "center", width: "100%" }}>{m.sub}</div>
+                    <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3, lineHeight: 1.4, textAlign: "center", width: "100%" }}>{m.sub}</div>
+                  </button>
+                ))}
+              </div>
+              {/* Row 2: Easy + Chaos */}
+              <div style={{ display: "flex", gap: 8 }}>
+                {[
+                  { id: "easy",  label: "Easy",  sub: "Big Roster · Reroll" },
+                  { id: "chaos", label: "Chaos", sub: "Lake Effect · Injury" },
+                ].map(m => (
+                  <button key={m.id} onClick={() => startMode(m.id)} style={{
+                    background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
+                    padding: "10px 14px", cursor: "pointer", textAlign: "center",
+                    fontFamily: "Georgia, serif", flex: 1,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 52,
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
+                    <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3, lineHeight: 1.4, textAlign: "center", width: "100%" }}>{m.sub}</div>
                   </button>
                 ))}
               </div>
@@ -2044,6 +2119,73 @@ export default function DawgPoundDraft() {
           </div>
         )}
 
+        {/* ── WEEK 18 (TANK) ── */}
+        {phase === "week18" && week18Event && (
+          <div style={{ position: "fixed", inset: 0, background: "#050302", zIndex: 9999,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            padding: 24, textAlign: "center" }}>
+
+            <div style={{
+              opacity: week18AnimPhase === "enter" ? 0 : 1,
+              transform: week18AnimPhase === "enter" ? "translateY(-20px)" : "translateY(0)",
+              transition: "opacity 0.6s ease, transform 0.6s ease",
+              marginBottom: 32,
+            }}>
+              <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 6,
+                color: "#ff9900", textTransform: "uppercase", fontFamily: "Georgia, serif" }}>
+                Week 18
+              </div>
+            </div>
+
+            {(week18AnimPhase === "spin" || week18AnimPhase === "reveal") && (
+              <div style={{ maxWidth: 360, width: "100%" }}>
+                <div style={{
+                  background: "#0d0a08",
+                  border: `1px solid ${week18AnimPhase === "reveal" ? (week18Event.winMod > 0 ? "#4a7a30" : "#8a2020") : "#3a2a18"}`,
+                  borderRadius: 10, padding: "20px 16px", transition: "border-color 0.4s",
+                }}>
+                  <div style={{
+                    fontSize: week18AnimPhase === "reveal" ? 15 : 13,
+                    fontWeight: 700,
+                    color: week18AnimPhase === "reveal" ? "#e0c090" : "#7a5a30",
+                    fontFamily: "Georgia, serif", lineHeight: 1.4, minHeight: 52,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "all 0.2s",
+                  }}>
+                    "{week18SpinName}"
+                  </div>
+
+                  {week18AnimPhase === "reveal" && (
+                    <div style={{ marginTop: 14 }}>
+                      <div style={{ fontSize: 13, color: "#7a6050", lineHeight: 1.6, marginBottom: 12 }}>
+                        {week18Event.desc}
+                      </div>
+                      <div style={{ fontSize: 26, fontWeight: 900,
+                        color: week18Event.winMod > 0 ? "#6aaa40" : "#cc4040" }}>
+                        {week18Event.winMod > 0 ? `+${week18Event.winMod}` : week18Event.winMod} Win{Math.abs(week18Event.winMod) !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {week18AnimPhase === "reveal" && (
+                  <div style={{ marginTop: 24, textAlign: "center" }}>
+                    <button onClick={() => {
+                      setWeek18AnimPhase("enter");
+                      setPhase("simulate");
+                      setTimeout(() => {
+                        const result = runSimulation(roster, mode, week18Event.winMod);
+                        setResult(result);
+                        setPhase("result");
+                      }, 1600);
+                    }} style={btn("#ff5500")}>See Results</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── SIMULATING ── */}
         {phase === "simulate" && (
           <div style={{ textAlign: "center", marginTop: 80 }}>
@@ -2113,9 +2255,28 @@ export default function DawgPoundDraft() {
             <div style={{ textAlign: "center", marginBottom: 6 }}>
               <span style={{ fontSize: 10, letterSpacing: 2, color: "#3a2a18", textTransform: "uppercase",
                 background: "#1a1208", border: "1px solid #2a1e10", borderRadius: 3, padding: "3px 8px" }}>
-                {mode === "easy" ? "⭐ Easy" : mode === "chaos" ? "🌊 Chaos" : "🏈 Classic"} Mode
+                {mode === "easy" ? "⭐ Easy" : mode === "chaos" ? "🌊 Chaos" : mode === "tank" ? "🪣 Tank" : "🏈 Classic"} Mode
               </span>
             </div>
+
+            {/* Tank: draft pick + Week 18 event */}
+            {mode === "tank" && (
+              <div style={{ margin: "8px 0 4px", textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#ff9900", fontFamily: "Georgia, serif", marginBottom: 6 }}>
+                  Projected Pick: {getDraftPick(result.wins)}
+                </div>
+                {week18Event && (
+                  <div style={{ padding: "8px 14px", background: "#0d0a06",
+                    border: `1px solid ${week18Event.winMod > 0 ? "#2a4a1a" : "#4a1a1a"}`, borderRadius: 6, display: "inline-block" }}>
+                    <span style={{ fontSize: 10, letterSpacing: 2, color: "#ff9900", textTransform: "uppercase" }}>Week 18</span>
+                    <div style={{ fontSize: 12, color: "#c09060", marginTop: 2, fontStyle: "italic" }}>"{week18Event.name}"</div>
+                    <div style={{ fontSize: 11, color: week18Event.winMod > 0 ? "#6a9a40" : "#c04040", marginTop: 2 }}>
+                      {week18Event.winMod > 0 ? `+${week18Event.winMod}` : week18Event.winMod} win applied
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Lake Effect result for Chaos mode */}
             {mode === "chaos" && lakeEffect && (
@@ -2187,14 +2348,14 @@ export default function DawgPoundDraft() {
                   </div>
                   {/* Mode filter */}
                   <div style={{ display: "flex", gap: 6, padding: "10px 16px", borderBottom: "1px solid #1a1208" }}>
-                    {["all","classic","easy","chaos"].map(f => (
+                    {["all","classic","tank","easy","chaos"].map(f => (
                       <button key={f} onClick={() => setLeaderboardFilter(f)} style={{
                         background: leaderboardFilter === f ? "#2a1e10" : "transparent",
                         border: `1px solid ${leaderboardFilter === f ? "#5a3820" : "#2a1a10"}`,
                         color: leaderboardFilter === f ? "#e0c090" : "#4a3020",
                         fontSize: 10, padding: "3px 8px", borderRadius: 3, cursor: "pointer",
                         fontFamily: "inherit", letterSpacing: "0.08em", textTransform: "uppercase",
-                      }}>{f === "all" ? "All" : f === "classic" ? "🏈 Classic" : f === "easy" ? "⭐ Easy" : "🌊 Chaos"}</button>
+                      }}>{f === "all" ? "All" : f === "classic" ? "🏈 Classic" : f === "tank" ? "🪣 Tank" : f === "easy" ? "⭐ Easy" : "🌊 Chaos"}</button>
                     ))}
                   </div>
                   <div style={{ overflowY: "auto", flex: 1 }}>
@@ -2202,14 +2363,16 @@ export default function DawgPoundDraft() {
                       <p style={{ color: "#5a4030", textAlign: "center", padding: 24, fontSize: 13 }}>Loading...</p>
                     ) : (() => {
                       const filtered = leaderboardFilter === "all" ? leaderboardData
-                        : leaderboardData.filter(e => (e.mode || "classic") === leaderboardFilter);
+                        : leaderboardFilter === "tank"
+                          ? [...leaderboardData.filter(e => (e.mode || "classic") === "tank" || e.wins <= 5)].sort((a,b) => a.wins - b.wins || a.score - b.score)
+                          : leaderboardData.filter(e => (e.mode || "classic") === leaderboardFilter);
                       return filtered.length === 0 ? (
                         <p style={{ color: "#5a4030", textAlign: "center", padding: 24, fontSize: 13 }}>No entries yet.</p>
                       ) : (
                         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                           <thead>
                             <tr style={{ borderBottom: "1px solid #1e1508" }}>
-                              {["#","Name","Record","Score","Mode","Roster"].map(h => (
+                              {(leaderboardFilter === "tank" ? ["#","Name","Record","Pick","Roster"] : ["#","Name","Record","Score","Mode","Roster"]).map(h => (
                                 <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#5a4030",
                                   fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{h}</th>
                               ))}
@@ -2222,10 +2385,16 @@ export default function DawgPoundDraft() {
                                 <td style={{ padding: "8px 10px", color: "#3a2a18", fontSize: 11 }}>{i+1}</td>
                                 <td style={{ padding: "8px 10px", color: "#e0c090", fontWeight: 500 }}>{entry.name}</td>
                                 <td style={{ padding: "8px 10px", color: "#c09060" }}>{entry.record}</td>
-                                <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600 }}>{entry.score}</td>
-                                <td style={{ padding: "8px 10px", color: "#5a4030", fontSize: 10 }}>
-                                  {{ classic:"Classic", easy:"Easy", chaos:"Chaos" }[entry.mode || "classic"] || "Classic"}
-                                </td>
+                                {leaderboardFilter === "tank" ? (
+                                  <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600, fontSize: 11 }}>{entry.draft_pick || getDraftPick(entry.wins)}</td>
+                                ) : (
+                                  <>
+                                    <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600 }}>{entry.score}</td>
+                                    <td style={{ padding: "8px 10px", color: "#5a4030", fontSize: 10 }}>
+                                      {{ classic:"Classic", easy:"Easy", chaos:"Chaos", tank:"Tank" }[entry.mode || "classic"] || "Classic"}
+                                    </td>
+                                  </>
+                                )}
                                 <td style={{ padding: "8px 10px" }}>
                                   <button onClick={() => setRosterPopup(rosterPopup?.id===entry.id ? null : {...entry.roster, id: entry.id})}
                                     style={{ background: "#1e1508", border: "1px solid #2a1e10", color: "#a07040",
@@ -2335,6 +2504,7 @@ export default function DawgPoundDraft() {
                 setUsedYears([]); setResult(null); setMode("classic");
                 setRerollsLeft(0); setLakeEffect(null); setLakeEffectDone(false);
                 setInjuredSlotId(null); setInjuryDone(false);
+                setWeek18Event(null); setWeek18AnimPhase("enter"); setWeek18SpinName("");
                 setSubmitted(false); setShowNamePrompt(false); setPlayerName("");
                 setPhase("intro");
               }} style={btn("#2a1506", false, "#ff5500")}>
@@ -2405,4 +2575,37 @@ function arrowBtn(disabled) {
     fontFamily: "inherit",
     padding: 0,
   };
-}
+}{/* Row 1: Classic + Tank */}
+              <div style={{ display: "flex", gap: 8 }}>
+                {[
+                  { id: "classic", label: "Classic", sub: "Painful" },
+                  { id: "tank",    label: "Tank",    sub: "Week 18 · Draft Pick" },
+                ].map(m => (
+                  <button key={m.id} onClick={() => startMode(m.id)} style={{
+                    background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
+                    padding: "10px 14px", cursor: "pointer", textAlign: "center",
+                    fontFamily: "Georgia, serif", flex: 1,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 52,
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
+                    <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3, lineHeight: 1.4, textAlign: "center", width: "100%" }}>{m.sub}</div>
+                  </button>
+                ))}
+              </div>
+              {/* Row 2: Easy + Chaos */}
+              <div style={{ display: "flex", gap: 8 }}>
+                {[
+                  { id: "easy",  label: "Easy",  sub: "Big Roster · Reroll" },
+                  { id: "chaos", label: "Chaos", sub: "Lake Effect · Injury" },
+                ].map(m => (
+                  <button key={m.id} onClick={() => startMode(m.id)} style={{
+                    background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
+                    padding: "10px 14px", cursor: "pointer", textAlign: "center",
+                    fontFamily: "Georgia, serif", flex: 1,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 52,
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
+                    <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3, lineHeight: 1.4, textAlign: "center", width: "100%" }}>{m.sub}</div>
+                  </button>
+                ))}
+              </div>
