@@ -869,20 +869,20 @@ const WEEK18_EVENTS = [
 ];
 
 function getDraftPick(wins) {
-  if (wins === 0)  return "#1 Overall";
-  if (wins === 1)  return "#2 Overall";
-  if (wins === 2)  return "#3 Overall";
-  if (wins <= 3)   return "#4–5 Pick";
-  if (wins <= 4)   return "#6–8 Pick";
-  if (wins <= 5)   return "#9–12 Pick";
-  if (wins <= 6)   return "#13–16 Pick";
-  if (wins <= 7)   return "#17–20 Pick";
-  if (wins <= 8)   return "#21–23 Pick";
-  if (wins <= 9)   return "#24–26 Pick";
-  if (wins <= 10)  return "#27–28 Pick";
-  if (wins <= 11)  return "Late 1st Round";
-  if (wins <= 12)  return "#31 Pick";
-  return "#32 (Last Pick)";
+  if (wins <= 2)  return "#1 Pick";
+  if (wins === 3)  return "#2 Pick";
+  if (wins === 4)  return "#3 Pick";
+  if (wins === 5)  return "#4 Pick";
+  if (wins === 6)  return "#7 Pick";
+  if (wins === 7)  return "#11 Pick";
+  if (wins === 8)  return "#14 Pick";
+  if (wins === 9)  return "#17 Pick";
+  if (wins === 10) return "#22 Pick";
+  if (wins === 11) return "#25 Pick";
+  if (wins === 12) return "#29 Pick";
+  if (wins === 13) return "#30 Pick";
+  if (wins === 14) return "#31 Pick";
+  return "#32 Pick";
 }
 
 function getBaseId(slotId) {
@@ -1674,7 +1674,7 @@ export default function DawgPoundDraft() {
       <div style={{ position: "fixed", inset: 0, opacity: 0.035, zIndex: 0, pointerEvents: "none",
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
         backgroundSize: "100px" }} />
-      {phase !== "lake_effect" && phase !== "injury" && <div style={{ height: 3, background: "linear-gradient(90deg, #c0300a, #ff5500, #ff8800, #ff5500, #c0300a)", position: "relative", zIndex: 2 }} />}
+      {phase !== "lake_effect" && phase !== "injury" && phase !== "week18" && <div style={{ height: 3, background: "linear-gradient(90deg, #c0300a, #ff5500, #ff8800, #ff5500, #c0300a)", position: "relative", zIndex: 2 }} />}
 
       <div style={{ maxWidth: 660, margin: "0 auto", padding: "0 18px 80px", position: "relative", zIndex: 1 }}>
 
@@ -1745,6 +1745,15 @@ export default function DawgPoundDraft() {
         {/* ── DRAFT ── */}
         {phase === "draft" && (
           <div style={{ marginTop: 16 }}>
+
+            {/* Tank motto */}
+            {mode === "tank" && (
+              <div style={{ textAlign: "center", marginBottom: 10 }}>
+                <span style={{ fontSize: 9, letterSpacing: 2, color: "#4a3820", textTransform: "uppercase" }}>
+                  Take bad players, get the top pick, trade it for more bad players
+                </span>
+              </div>
+            )}
 
             {/* Easy mode feature label */}
             {mode === "easy" && (
@@ -2255,7 +2264,7 @@ export default function DawgPoundDraft() {
             <div style={{ textAlign: "center", marginBottom: 6 }}>
               <span style={{ fontSize: 10, letterSpacing: 2, color: "#3a2a18", textTransform: "uppercase",
                 background: "#1a1208", border: "1px solid #2a1e10", borderRadius: 3, padding: "3px 8px" }}>
-                {mode === "easy" ? "⭐ Easy" : mode === "chaos" ? "🌊 Chaos" : mode === "tank" ? "🪣 Tank" : "🏈 Classic"} Mode
+                {mode === "easy" ? "⭐ Easy" : mode === "chaos" ? "🌊 Chaos" : mode === "tank" ? "🗑️ Tank" : "🏈 Classic"} Mode
               </span>
             </div>
 
@@ -2355,7 +2364,7 @@ export default function DawgPoundDraft() {
                         color: leaderboardFilter === f ? "#e0c090" : "#4a3020",
                         fontSize: 10, padding: "3px 8px", borderRadius: 3, cursor: "pointer",
                         fontFamily: "inherit", letterSpacing: "0.08em", textTransform: "uppercase",
-                      }}>{f === "all" ? "All" : f === "classic" ? "🏈 Classic" : f === "tank" ? "🪣 Tank" : f === "easy" ? "⭐ Easy" : "🌊 Chaos"}</button>
+                      }}>{f === "all" ? "All" : f === "classic" ? "🏈 Classic" : f === "tank" ? "🗑️ Tank" : f === "easy" ? "⭐ Easy" : "🌊 Chaos"}</button>
                     ))}
                   </div>
                   <div style={{ overflowY: "auto", flex: 1 }}>
@@ -2386,7 +2395,7 @@ export default function DawgPoundDraft() {
                                 <td style={{ padding: "8px 10px", color: "#e0c090", fontWeight: 500 }}>{entry.name}</td>
                                 <td style={{ padding: "8px 10px", color: "#c09060" }}>{entry.record}</td>
                                 {leaderboardFilter === "tank" ? (
-                                  <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600, fontSize: 11 }}>{entry.draft_pick || getDraftPick(entry.wins)}</td>
+                                  <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600, fontSize: 11 }}>{(entry.draft_pick || getDraftPick(entry.wins)).replace(" Pick", "")}</td>
                                 ) : (
                                   <>
                                     <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600 }}>{entry.score}</td>
@@ -2514,7 +2523,7 @@ export default function DawgPoundDraft() {
           </div>
         )}
       </div>
-      {phase !== "lake_effect" && phase !== "injury" && <div style={{ height: 3, background: "linear-gradient(90deg, #c0300a, #ff5500, #ff8800, #ff5500, #c0300a)", position: "relative", zIndex: 2 }} />}
+      {phase !== "lake_effect" && phase !== "injury" && phase !== "week18" && <div style={{ height: 3, background: "linear-gradient(90deg, #c0300a, #ff5500, #ff8800, #ff5500, #c0300a)", position: "relative", zIndex: 2 }} />}
 
       {/* Legal Disclaimer */}
       <div style={{
