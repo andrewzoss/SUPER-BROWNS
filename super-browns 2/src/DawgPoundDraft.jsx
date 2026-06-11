@@ -1113,7 +1113,7 @@ function runSimulation(roster, mode = "classic", lakeEffectMod = 0) {
   // Liability: lowest score among positions with weight >= 5
   let liabilityId = "QB", liabilityScore = 99;
   for (const slot of simSlots) {
-    if ((weights[slot.id] || 5) >= 5 && (scores[slot.id] || 5) < liabilityScore) {Score = scores[slot.id]; liabilityId = slot.id;
+    if ((weights[slot.id] || 5) >= 5 && (scores[slot.id] || 5) < liabilityScore) { liabilityScore = scores[slot.id]; liabilityId = slot.id;
     }
   }
 
