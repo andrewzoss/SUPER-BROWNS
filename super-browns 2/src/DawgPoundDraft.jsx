@@ -1704,28 +1704,22 @@ export default function DawgPoundDraft() {
           <div style={{ textAlign: "center", marginTop: 32, padding: "0 16px" }}>
             <div style={{ fontSize: 11, letterSpacing: 3, color: "#c4a882", textTransform: "uppercase", marginBottom: 10 }}>Select Mode</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
-              {/* Row 1: Classic + Tank */}
+              {/* Row 1: Classic — full width */}
+              <button onClick={() => startMode("classic")} style={{
+                background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
+                padding: "10px 14px", cursor: "pointer", textAlign: "center",
+                fontFamily: "Georgia, serif", width: "100%",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 52,
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Classic</div>
+                <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3 }}>Painful</div>
+              </button>
+              {/* Row 2: Tank, Chaos, Easy */}
               <div style={{ display: "flex", gap: 8 }}>
                 {[
-                  { id: "classic", label: "Classic", sub: "Painful" },
-                  { id: "tank",    label: "Tank",    sub: "Week 18 · Draft Pick" },
-                ].map(m => (
-                  <button key={m.id} onClick={() => startMode(m.id)} style={{
-                    background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
-                    padding: "10px 14px", cursor: "pointer", textAlign: "center",
-                    fontFamily: "Georgia, serif", flex: 1,
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 52,
-                  }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#e0c090", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</div>
-                    <div style={{ fontSize: 8, color: "#4a3020", letterSpacing: "0.04em", textTransform: "uppercase", marginTop: 3, lineHeight: 1.4, textAlign: "center", width: "100%" }}>{m.sub}</div>
-                  </button>
-                ))}
-              </div>
-              {/* Row 2: Easy + Chaos */}
-              <div style={{ display: "flex", gap: 8 }}>
-                {[
-                  { id: "easy",  label: "Easy",  sub: "Big Roster · Reroll" },
+                  { id: "tank",  label: "Tank",  sub: "Week 18 · Draft Pick" },
                   { id: "chaos", label: "Chaos", sub: "Lake Effect · Injury" },
+                  { id: "easy",  label: "Easy",  sub: "Big Roster · Reroll" },
                 ].map(m => (
                   <button key={m.id} onClick={() => startMode(m.id)} style={{
                     background: "#130e08", border: "1px solid #3a2a18", borderRadius: 6,
@@ -2381,7 +2375,7 @@ export default function DawgPoundDraft() {
                         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                           <thead>
                             <tr style={{ borderBottom: "1px solid #1e1508" }}>
-                              {(leaderboardFilter === "tank" ? ["#","Name","Record","Pick","Roster"] : ["#","Name","Record","Score","Mode","Roster"]).map(h => (
+                              {(leaderboardFilter === "tank" ? ["#","Name","Record","Score","Pick","Roster"] : ["#","Name","Record","Score","Mode","Roster"]).map(h => (
                                 <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#5a4030",
                                   fontWeight: 500, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{h}</th>
                               ))}
@@ -2395,7 +2389,10 @@ export default function DawgPoundDraft() {
                                 <td style={{ padding: "8px 10px", color: "#e0c090", fontWeight: 500 }}>{entry.name}</td>
                                 <td style={{ padding: "8px 10px", color: "#c09060" }}>{entry.record}</td>
                                 {leaderboardFilter === "tank" ? (
-                                  <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600, fontSize: 11 }}>{(entry.draft_pick || getDraftPick(entry.wins)).replace(" Pick", "")}</td>
+                                  <>
+                                    <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600 }}>{entry.score}</td>
+                                    <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600, fontSize: 11 }}>{(entry.draft_pick || getDraftPick(entry.wins)).replace(" Pick", "")}</td>
+                                  </>
                                 ) : (
                                   <>
                                     <td style={{ padding: "8px 10px", color: "#ff9900", fontWeight: 600 }}>{entry.score}</td>
