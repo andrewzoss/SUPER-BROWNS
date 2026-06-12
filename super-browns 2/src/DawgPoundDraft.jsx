@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { supabase } from "./supabaseClient.js";
 
 // ─── COMPLETE BROWNS DATA 1999-2025 ───────────────────────────────────────────
