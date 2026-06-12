@@ -1561,7 +1561,7 @@ export default function DawgPoundDraft() {
     setLeaderboardLoading(true);
     if (mode === "tank") setLeaderboardFilter("tank");
     const { data } = await supabase.from("leaderboard").select("*")
-      .order("score", { ascending: false }).order("wins", { ascending: false }).limit(100);
+      .order("score", { ascending: false }).order("wins", { ascending: false }).limit(1000);
     setLeaderboardData(data || []); setLeaderboardLoading(false);
   };
 
@@ -2386,6 +2386,7 @@ export default function DawgPoundDraft() {
                           </thead>
                           <tbody>
                             {filtered.map((entry, i) => (
+                              <React.Fragment key={entry.id}>
                               <tr key={entry.id} style={{ borderBottom: "1px solid #1a1208",
                                 background: i%2===0 ? "transparent" : "#0d0a06" }}>
                                 <td style={{ padding: "8px 10px", color: "#3a2a18", fontSize: 11 }}>{i+1}</td>
@@ -2413,30 +2414,32 @@ export default function DawgPoundDraft() {
                                   </button>
                                 </td>
                               </tr>
+                            
+                              {rosterPopup?.id===entry.id && (
+                                <tr>
+                                  <td colSpan={8} style={{ padding: "0 10px 10px", background: "#0d0805" }}>
+                                    <div style={{ background: "#110a04", border: "1px solid #2a1e10", borderRadius: 6, padding: "10px 12px" }}>
+                                      <div style={{ fontSize: 9, color: "#5a4030", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Roster</div>
+                                      {(entry.mode==="easy" ? EASY_SLOTS : SLOTS).map(slot => {
+                                        const p = rosterPopup[slot.id]; if (!p) return null;
+                                        return (
+                                          <div key={slot.id} style={{ display: "flex", gap: 8, padding: "2px 0", borderBottom: "1px solid #160d06", alignItems: "center" }}>
+                                            <div style={{ width: 44, fontSize: 9, color: "#ff5500", letterSpacing: 1, textTransform: "uppercase", flexShrink: 0 }}>{slot.label}</div>
+                                            <div style={{ fontSize: 11, color: "#c4a882", flex: 1 }}>{p.name}</div>
+                                            <div style={{ fontSize: 9, color: "#3a2010" }}>'{String(p.year).slice(2)}</div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                              </React.Fragment>
                             ))}
                           </tbody>
                         </table>
                       );
                     })()}
-                    {rosterPopup && (
-                      <div style={{ margin: "0 12px 12px", background: "#0d0a06",
-                        border: "1px solid #2a1e10", borderRadius: 6, padding: "12px 14px" }}>
-                        <p style={{ fontSize: 10, color: "#5a4030", textTransform: "uppercase",
-                          letterSpacing: "0.1em", marginBottom: 8 }}>Roster</p>
-                        {(mode === "easy" ? EASY_SLOTS : SLOTS).map(slot => {
-                          const p = rosterPopup[slot.id]; if (!p) return null;
-                          return (
-                            <div key={slot.id} style={{ display: "flex", gap: 8, alignItems: "baseline",
-                              padding: "3px 0", borderBottom: "1px solid #1a1208" }}>
-                              <span style={{ fontSize: 10, color: "#3a2a18", width: 30,
-                                textTransform: "uppercase", flexShrink: 0 }}>{slot.label}</span>
-                              <span style={{ fontSize: 12, color: "#c09060" }}>{p.name}</span>
-                              <span style={{ fontSize: 11, color: "#3a2a18", marginLeft: "auto" }}>{p.year}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
